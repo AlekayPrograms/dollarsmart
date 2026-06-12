@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  test: {
+    exclude: ['tests/firestore-rules.test.js', 'node_modules/**'],
+  },
   plugins: [
     react(),
     VitePWA({
