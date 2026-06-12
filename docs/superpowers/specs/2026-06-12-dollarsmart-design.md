@@ -7,7 +7,7 @@
 
 ## Overview
 
-DollarSmart is a couples personal finance PWA for exactly two people. It tracks shared and personal expenses, syncs in real-time, and uses Plaid bank integration to detect transactions and prompt logging. Designed for low friction and ADHD-friendly UX — the primary goal is an app that actually gets opened and used daily.
+DollarSmart is a couples personal finance PWA for exactly two people. It tracks personal expenses and income (private per user) plus shared/split expenses, syncs in real-time, and uses Plaid bank integration to detect transactions and prompt logging. Designed for low friction and ADHD-friendly UX — the primary goal is an app that actually gets opened and used daily.
 
 ---
 
@@ -45,6 +45,7 @@ DollarSmart is a couples personal finance PWA for exactly two people. It tracks 
   - date: timestamp
   - uid: string (who logged it)
   - householdId: string
+  - type: "expense" | "income"
   - poolType: "personal" | "shared" | "split"
   - splitRatio: number (default 0.5, only for "split")
   - plaidMerchant: string (optional, from Plaid webhook)
@@ -67,6 +68,7 @@ DollarSmart is a couples personal finance PWA for exactly two people. It tracks 
 4. Joiner enters code → both see the shared home screen
 5. Both connect their bank accounts via Plaid Link (separate, each user's own flow — credentials never touch our app)
 6. Notification permission prompt (one ask, with explanation of value)
+7. **iPhone-specific step:** Guided "Add to Home Screen" prompt for Safari users — shows an animated visual of exactly where the Share button and "Add to Home Screen" option are. Skipping this means no push notifications on iPhone, so the prompt is persistent (not dismissible) until completed or explicitly skipped with a warning.
 
 ---
 
@@ -78,7 +80,9 @@ DollarSmart is a couples personal finance PWA for exactly two people. It tracks 
 - Today's spend summary (personal + shared at a glance)
 - Shared pool progress bar (current vs. monthly target)
 - Logging streak badge
-- Floating **Quick Log** button (always visible, highest z-index)
+- Floating **Quick Log** button (FAB) — visible on all tabs except the Log tab itself
+  - Minimizable: tap the X to collapse to a small floating pill ("+" icon only)
+  - Tap the pill to expand back to full FAB — position and state persisted per session
 - Swipeable — swipe left/right to navigate between months, chart animates in
 
 ### Tab 2 — Log
@@ -86,15 +90,18 @@ DollarSmart is a couples personal finance PWA for exactly two people. It tracks 
   - Pool defaults to **Personal** — toggle to Shared available on the same screen (one tap)
   - ÷2 button beside the amount field: taps instantly halves amount and auto-tags as "split" + routes to Shared
   - Manual split: expandable option for custom ratio (e.g. 60/40)
-- **Full Log** toggle: expands to add note, date override, explicit personal vs. shared selection
+  - **Type toggle:** Expense (default) or Income — income is always Personal, never shared
+  - Delete shows a 5-second **Undo toast** instead of a confirm dialog — no modals, faster recovery
+- **Full Log** toggle: expands to add note, date override, explicit personal vs. shared selection, income vs. expense
 - Pool selector: Personal (private) or Shared (both see it)
 
 ### Tab 3 — Expenses
-- Chronological feed, most recent first
-- Each card shows: amount, category chip (colored), merchant/note, who logged it, pool badge (Personal / Shared / Split), date
+- Chronological feed, most recent first — shows only your own expenses (personal + any shared/split you logged or participated in)
+- Each card shows: amount, category chip (colored), merchant/note, pool badge (Personal / Shared / Split / Income), date
 - Emoji reaction row under shared/split expenses — tap to react (❤️ 😂 👀 😬 💀)
-- Filter bar: by month, category, pool type, or person
-- Swipe left on a card to edit; swipe right to delete (with confirm) — only your own expenses are editable/deletable
+- Filter bar: by month, category, pool type
+- Swipe left on a card to edit; swipe right to delete — only your own expenses are editable/deletable
+- Delete shows a 5-second **Undo toast** (no confirm dialog) — tap Undo to restore instantly
 
 ### Tab 4 — Settings
 - Monthly targets per category (personal + shared separately)
@@ -105,6 +112,7 @@ DollarSmart is a couples personal finance PWA for exactly two people. It tracks 
   - Partner logged a shared expense
 - Light / dark mode toggle (dark default)
 - Bank connection status + reconnect
+- **Export all expenses as CSV** — one tap, downloads a CSV of all your expenses (personal + shared you participated in) with columns: date, type, amount, category, note, pool
 - Household group info
 - Account / sign out
 
@@ -189,7 +197,7 @@ Both users can add custom categories in Settings.
 - Light/dark toggle in Settings, preference saved per user
 
 ### Core component set (build once, reuse everywhere)
-Button, AmountInput, CategoryTile, ExpenseCard, ProgressBar, Modal, TabBar, StreakBadge, ReactionRow, Toast
+Button, AmountInput, CategoryTile, ExpenseCard, ProgressBar, Modal, TabBar, StreakBadge, ReactionRow, Toast, FloatingActionButton (minimizable FAB), UndoToast, TypeToggle (expense/income)
 
 ---
 
