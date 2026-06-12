@@ -1,5 +1,8 @@
 import { initializeApp } from 'firebase/app'
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
+import {
+  initializeFirestore, persistentLocalCache, persistentSingleTabManager,
+  connectFirestoreEmulator,
+} from 'firebase/firestore'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
 
 const firebaseConfig = {
@@ -12,10 +15,15 @@ const firebaseConfig = {
 }
 
 export const app = initializeApp(firebaseConfig)
-export const db = getFirestore(app)
+
+// Persistent IndexedDB cache = offline support out of the box.
+// Writes queue locally and sync on reconnect.
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() }),
+})
+
 export const auth = getAuth(app)
 
-// Connect to local emulators in dev when explicitly enabled
 if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true') {
   connectFirestoreEmulator(db, 'localhost', 8080)
   connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true })
