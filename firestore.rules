@@ -2,25 +2,20 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper: is the request authenticated as the given uid
     function isUser(uid) {
       return request.auth != null && request.auth.uid == uid;
     }
 
-    // Helper: is the requester a member of the given household
     function isHouseholdMember(householdId) {
       return request.auth != null
         && exists(/databases/$(database)/documents/households/$(householdId))
         && request.auth.uid in get(/databases/$(database)/documents/households/$(householdId)).data.memberUids;
     }
 
-    // users/{uid}: a user can read and write only their own profile doc
     match /users/{uid} {
       allow read, write: if isUser(uid);
     }
 
-    // households/{householdId}: readable/writable only by members.
-    // Creation: the creator must include their own uid in memberUids.
     match /households/{householdId} {
       allow read: if isHouseholdMember(householdId);
       allow create: if request.auth != null
@@ -28,14 +23,19 @@ service cloud.firestore {
       allow update, delete: if isHouseholdMember(householdId);
     }
 
-    // expenses/{expenseId}: an expense is readable and writable ONLY by the
-    // user who logged it. Per the spec privacy model, each user's feed shows
-    // only their own data — including shared/split entries they participated in.
     match /expenses/{expenseId} {
       allow read: if isUser(resource.data.uid);
       allow create: if isUser(request.resource.data.uid)
         && isHouseholdMember(request.resource.data.householdId);
       allow update, delete: if isUser(resource.data.uid);
+    }
+
+    // inviteCodes/{code}: readable by any authenticated user (needed to look up
+    // a household by code during join). Writable by any authenticated user (the
+    // creator writes it on household creation).
+    match /inviteCodes/{code} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
     }
   }
 }
