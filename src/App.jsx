@@ -4,6 +4,7 @@ import HouseholdGate from './components/HouseholdGate.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import OnboardingPage from './pages/OnboardingPage.jsx'
 import HomePage from './pages/HomePage.jsx'
+import LogPage from './pages/LogPage.jsx'
 
 function App() {
   return (
@@ -14,6 +15,16 @@ function App() {
         element={
           <AuthGate>
             <OnboardingPage />
+          </AuthGate>
+        }
+      />
+      <Route
+        path="/log"
+        element={
+          <AuthGate>
+            <HouseholdGate>
+              <LogPage />
+            </HouseholdGate>
           </AuthGate>
         }
       />
