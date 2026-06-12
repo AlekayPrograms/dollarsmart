@@ -6,6 +6,7 @@ import OnboardingPage from './pages/OnboardingPage.jsx'
 import HomePage from './pages/HomePage.jsx'
 import LogPage from './pages/LogPage.jsx'
 import ExpensesPage from './pages/ExpensesPage.jsx'
+import SettingsPage from './pages/SettingsPage.jsx'
 
 function App() {
   return (
@@ -35,6 +36,16 @@ function App() {
           <AuthGate>
             <HouseholdGate>
               <ExpensesPage />
+            </HouseholdGate>
+          </AuthGate>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <AuthGate>
+            <HouseholdGate>
+              <SettingsPage />
             </HouseholdGate>
           </AuthGate>
         }
