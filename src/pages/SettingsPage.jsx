@@ -47,6 +47,9 @@ export default function SettingsPage() {
             <span style={{ width: 28 }}>{cat.emoji}</span>
             <span style={{ flex: 1, fontSize: '0.9rem' }}>{cat.label}</span>
             <input
+              // defaultValue only applies on mount; remount via key when the
+              // saved target arrives async so loaded values actually display.
+              key={`${cat.id}:${targets[cat.id] ?? ''}`}
               type="number"
               inputMode="decimal"
               defaultValue={targets[cat.id] ?? ''}

@@ -13,7 +13,7 @@ export default function HomePage() {
   const streak = currentStreak(expenses.map((e) => e.date))
   const pools = sumByPool(expenses)
   const sharedSpent = pools.shared ?? 0
-  const sharedTarget = Object.values(household?.sharedTargets ?? {}).reduce((a, b) => a + b, 0)
+  const sharedTarget = Object.values(household?.sharedTargets ?? {}).reduce((a, b) => a + (Number(b) || 0), 0)
 
   return (
     <div className="page-center" style={{ justifyContent: 'flex-start', paddingTop: '2rem', gap: '1.5rem' }}>

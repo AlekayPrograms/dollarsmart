@@ -59,6 +59,7 @@ export default function ExpensesPage() {
 
       {pendingDelete && (
         <UndoToast
+          key={pendingDelete.id}
           message="Expense deleted"
           onUndo={handleUndo}
           onExpire={handleExpire}
