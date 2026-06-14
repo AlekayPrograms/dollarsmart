@@ -21,7 +21,7 @@ export default function HomePage() {
   const sharedTarget = Object.values(household?.sharedTargets ?? {}).reduce((a, b) => a + (Number(b) || 0), 0)
 
   return (
-    <div className="page-center" style={{ justifyContent: 'flex-start', paddingTop: '2rem', gap: '1.5rem' }}>
+    <div className="page-center" style={{ justifyContent: 'flex-start', paddingTop: '1.25rem', gap: '0.75rem' }}>
       <h1 style={{ margin: 0 }}>💸 DollarSmart</h1>
 
       <StreakBadge streak={streak} />

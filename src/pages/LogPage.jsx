@@ -74,7 +74,7 @@ export default function LogPage() {
   }
 
   return (
-    <div className="page-center" style={{ justifyContent: 'flex-start', paddingTop: '2rem', gap: '1.5rem' }}>
+    <div className="page-center" style={{ justifyContent: 'flex-start', paddingTop: '1rem', gap: '0.75rem' }}>
       <TypeToggle type={type} onChange={handleTypeChange} />
 
       <AmountInput value={amountText} onChange={setAmountText} />
