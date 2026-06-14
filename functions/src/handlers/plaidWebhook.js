@@ -35,13 +35,16 @@ function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory })
       const res = await plaid.transactionsSync({ access_token: item.data.accessToken, cursor })
       const { added, has_more: more, next_cursor: next } = res.data
       for (const tx of added) {
+        // Plaid uses positive amounts for outflow (spending) and negative for
+        // inflow (refunds, payments received). Only prompt to log spending.
+        if (!(tx.amount > 0)) continue
         const categoryId = merchantToCategory(
           tx.merchant_name || tx.name,
           tx.personal_finance_category && tx.personal_finance_category.primary,
         )
         await db.doc(`pendingTransactions/${tx.transaction_id}`).set({
           uid: item.uid,
-          amount: Math.abs(tx.amount),
+          amount: tx.amount,
           merchantName: tx.merchant_name || tx.name || 'Unknown',
           categoryId,
           date: tx.date,
@@ -51,8 +54,10 @@ function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory })
       }
       cursor = next
       hasMore = more
+      // Persist the cursor after each page so a mid-pagination failure resumes
+      // forward on Plaid's retry instead of re-processing earlier pages.
+      await db.doc(`plaidItems/${item.uid}`).set({ cursor: cursor || null }, { merge: true })
     }
-    await db.doc(`plaidItems/${item.uid}`).set({ cursor: cursor || null }, { merge: true })
   }
 }
 
@@ -67,15 +72,22 @@ async function markReauthRequired(db, itemId) {
 const plaidWebhook = onRequest(
   { secrets: [PLAID_CLIENT_ID, PLAID_SECRET] },
   async (req, res) => {
-    const rawBody = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body)
     const header = req.get('Plaid-Verification')
+
+    // We must hash the EXACT bytes Plaid signed. Re-serializing req.body would
+    // produce a different string and never match the signature, so if the raw
+    // body is unavailable we fail closed rather than guess.
+    if (!req.rawBody) { res.status(401).send('missing raw body'); return }
+    const rawBody = req.rawBody.toString('utf8')
 
     const verify = makeVerifyWebhook({
       getKey: async () => {
         const kid = safeDecodeKid(header)
         const plaid = getPlaidClient()
         const keyRes = await plaid.webhookVerificationKeyGet({ key_id: kid })
-        return keyRes.data.key
+        const key = keyRes.data.key
+        if (key.expired_at) throw new Error('verification key expired')
+        return key
       },
       verifyJwt: async (token, jwk) => {
         const key = await jose.importJWK(jwk, 'ES256')
@@ -86,7 +98,10 @@ const plaidWebhook = onRequest(
     const ok = await verify({ header, rawBody })
     if (!ok) { res.status(401).send('invalid signature'); return }
 
-    const { webhook_type: type, webhook_code: code, item_id: itemId } = req.body
+    // Route off the verified bytes, not the separately-parsed req.body.
+    let body
+    try { body = JSON.parse(rawBody) } catch { res.status(400).send('bad body'); return }
+    const { webhook_type: type, webhook_code: code, item_id: itemId } = body
     const db = adminDbAdapter()
     try {
       if (type === 'TRANSACTIONS' && (code === 'SYNC_UPDATES_AVAILABLE' || code === 'DEFAULT_UPDATE' || code === 'INITIAL_UPDATE' || code === 'HISTORICAL_UPDATE')) {
