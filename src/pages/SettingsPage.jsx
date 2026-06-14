@@ -7,6 +7,7 @@ import { useExpenses } from '../hooks/useExpenses.js'
 import { useMonthlyTargets } from '../hooks/useMonthlyTargets.js'
 import { CATEGORIES } from '../lib/categories.js'
 import { expensesToCsv } from '../lib/csv.js'
+import ConnectBankButton from '../components/ConnectBankButton.jsx'
 
 export default function SettingsPage() {
   const { user, signOutUser } = useAuth()
@@ -65,6 +66,11 @@ export default function SettingsPage() {
             />
           </div>
         ))}
+      </div>
+
+      <div style={{ width: '100%', maxWidth: 420 }}>
+        <h3 style={{ fontSize: '1rem', color: '#CBD5E1' }}>Bank connection</h3>
+        <ConnectBankButton />
       </div>
 
       <button className="btn btn-secondary" style={{ width: '100%', maxWidth: 420 }} onClick={handleExport}>
