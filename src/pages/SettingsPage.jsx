@@ -8,6 +8,8 @@ import { useMonthlyTargets } from '../hooks/useMonthlyTargets.js'
 import { CATEGORIES } from '../lib/categories.js'
 import { expensesToCsv } from '../lib/csv.js'
 import ConnectBankButton from '../components/ConnectBankButton.jsx'
+import HouseholdInvite from '../components/HouseholdInvite.jsx'
+import InstallAppButton from '../components/InstallAppButton.jsx'
 
 export default function SettingsPage() {
   const { user, signOutUser } = useAuth()
@@ -40,6 +42,10 @@ export default function SettingsPage() {
         <h2 style={{ margin: 0 }}>Settings</h2>
         <button className="btn btn-secondary" onClick={() => navigate('/')}>Home</button>
       </div>
+
+      <InstallAppButton />
+
+      <HouseholdInvite />
 
       <div style={{ width: '100%', maxWidth: 420 }}>
         <h3 style={{ fontSize: '1rem', color: '#CBD5E1' }}>Monthly targets (personal)</h3>

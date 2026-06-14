@@ -12,7 +12,7 @@ const ERROR_MESSAGES = {
 }
 
 export default function OnboardingPage() {
-  const { user } = useAuth()
+  const { user, signOutUser } = useAuth()
   const navigate = useNavigate()
   const [view, setView] = useState('choose')
   const [inviteCode, setInviteCode] = useState(null)
@@ -65,6 +65,12 @@ export default function OnboardingPage() {
             Join with a code
           </button>
         </div>
+        <button
+          onClick={() => signOutUser()}
+          style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '0.85rem', cursor: 'pointer', marginTop: '2rem' }}
+        >
+          Sign out
+        </button>
       </div>
     )
   }
