@@ -37,6 +37,7 @@ export default function PendingTransactionBanner() {
     <div style={{
       width: '100%', maxWidth: 420, background: '#1E293B', borderRadius: 12,
       padding: '0.9rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem',
+      color: '#F8FAFC',
     }}>
       <div style={{ fontSize: '0.9rem' }}>
         {cat.emoji} Looks like you spent <strong>${tx.amount.toFixed(2)}</strong> at {tx.merchantName} — log it?
