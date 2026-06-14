@@ -13,6 +13,12 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
+      injectManifest: {
+        rollupFormat: 'iife',
+      },
       manifest: {
         name: 'DollarSmart',
         short_name: 'DollarSmart',

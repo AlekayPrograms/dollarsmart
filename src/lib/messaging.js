@@ -21,7 +21,10 @@ export async function enableNotifications(uid) {
   if (permission !== 'granted') return { ok: false, reason: 'denied' }
 
   try {
-    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js')
+    // Use the already-active SW (sw.js, which includes the FCM handler).
+    // Registering a second SW at the same scope causes it to wait indefinitely
+    // and never receive push events.
+    const registration = await navigator.serviceWorker.ready
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration: registration,
