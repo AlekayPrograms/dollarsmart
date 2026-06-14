@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { deleteDoc, doc } from 'firebase/firestore'
+import { db } from '../firebase/client.js'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { useHousehold } from '../hooks/useHousehold.js'
 import { normalizeAmount, validateAmount, splitInHalf } from '../lib/expense.js'
@@ -13,11 +15,13 @@ export default function LogPage() {
   const { user } = useAuth()
   const { householdId } = useHousehold()
   const navigate = useNavigate()
+  const location = useLocation()
+  const prefill = location.state || {}
 
-  const [amountText, setAmountText] = useState('')
-  const [categoryId, setCategoryId] = useState(null)
+  const [amountText, setAmountText] = useState(prefill.prefillAmount != null ? String(prefill.prefillAmount) : '')
+  const [categoryId, setCategoryId] = useState(prefill.prefillCategoryId ?? null)
   const [type, setType] = useState('expense')
-  const [poolType, setPoolType] = useState('personal')
+  const [poolType, setPoolType] = useState(prefill.prefillSplit ? 'split' : 'personal')
   const [showDetails, setShowDetails] = useState(false)
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
@@ -50,6 +54,9 @@ export default function LogPage() {
         poolType: type === 'income' ? 'personal' : poolType,
         note,
       })
+      if (prefill.pendingId) {
+        await deleteDoc(doc(db, 'pendingTransactions', prefill.pendingId)).catch(() => {})
+      }
       navigate('/', { replace: true })
     } catch (err) {
       console.error('Failed to save', err)
