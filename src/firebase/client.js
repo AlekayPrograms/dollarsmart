@@ -4,6 +4,7 @@ import {
   connectFirestoreEmulator,
 } from 'firebase/firestore'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
+import { getMessaging, isSupported as isMessagingSupportedRaw } from 'firebase/messaging'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -27,4 +28,13 @@ export const auth = getAuth(app)
 if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATOR === 'true') {
   connectFirestoreEmulator(db, 'localhost', 8080)
   connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true })
+}
+
+export async function getMessagingIfSupported() {
+  try {
+    if (await isMessagingSupportedRaw()) return getMessaging(app)
+  } catch {
+    /* unsupported */
+  }
+  return null
 }
