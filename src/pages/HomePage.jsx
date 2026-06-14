@@ -6,6 +6,7 @@ import { sumByPool } from '../lib/budget.js'
 import StreakBadge from '../components/StreakBadge.jsx'
 import ProgressBar from '../components/ProgressBar.jsx'
 import PendingTransactionBanner from '../components/PendingTransactionBanner.jsx'
+import ReconnectBanner from '../components/ReconnectBanner.jsx'
 
 export default function HomePage() {
   const { expenses } = useExpenses()
@@ -23,6 +24,8 @@ export default function HomePage() {
       <StreakBadge streak={streak} />
 
       <PendingTransactionBanner />
+
+      <ReconnectBanner />
 
       {sharedTarget > 0 && (
         <div style={{ width: '100%', maxWidth: 420 }}>

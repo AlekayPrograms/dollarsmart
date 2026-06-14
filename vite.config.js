@@ -4,7 +4,10 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   test: {
-    exclude: ['tests/firestore-rules.test.js', 'node_modules/**'],
+    // functions/** holds Jest (CommonJS) tests run separately via
+    // `npm --prefix functions test`; keep vitest out of them and out of the
+    // emulator-only rules test.
+    exclude: ['tests/firestore-rules.test.js', 'functions/**', 'node_modules/**'],
   },
   plugins: [
     react(),
