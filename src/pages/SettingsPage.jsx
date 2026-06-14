@@ -10,6 +10,7 @@ import { expensesToCsv } from '../lib/csv.js'
 import ConnectBankButton from '../components/ConnectBankButton.jsx'
 import HouseholdInvite from '../components/HouseholdInvite.jsx'
 import InstallAppButton from '../components/InstallAppButton.jsx'
+import NotificationSettings from '../components/NotificationSettings.jsx'
 
 export default function SettingsPage() {
   const { user, signOutUser } = useAuth()
@@ -73,6 +74,8 @@ export default function SettingsPage() {
           </div>
         ))}
       </div>
+
+      <NotificationSettings />
 
       <div style={{ width: '100%', maxWidth: 420 }}>
         <h3 style={{ fontSize: '1rem', color: '#CBD5E1' }}>Bank connection</h3>
