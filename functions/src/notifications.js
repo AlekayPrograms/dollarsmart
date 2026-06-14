@@ -29,7 +29,7 @@ function makeSendTransactionAlert({ db, messaging }) {
         pendingId,
       }))
     } catch (err) {
-      console.error('failed to send transaction alert', err)
+      console.error('FCM send failed:', err.message || err)
     }
   }
 }
