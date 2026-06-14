@@ -16,7 +16,15 @@ export default function LogPage() {
   const { householdId } = useHousehold()
   const navigate = useNavigate()
   const location = useLocation()
-  const prefill = location.state || {}
+  const params = new URLSearchParams(location.search)
+  // Router state (in-app banner) takes priority; query params come from a
+  // tapped push notification opened by the service worker.
+  const prefill = {
+    prefillAmount: location.state?.prefillAmount ?? (params.get('amount') ? Number(params.get('amount')) : undefined),
+    prefillCategoryId: location.state?.prefillCategoryId ?? params.get('categoryId') ?? undefined,
+    prefillSplit: location.state?.prefillSplit ?? false,
+    pendingId: location.state?.pendingId ?? params.get('pendingId') ?? undefined,
+  }
 
   const [amountText, setAmountText] = useState(prefill.prefillAmount != null ? String(prefill.prefillAmount) : '')
   const [categoryId, setCategoryId] = useState(prefill.prefillCategoryId ?? null)
