@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useExpenses } from '../hooks/useExpenses.js'
+import { useSharedExpenses } from '../hooks/useSharedExpenses.js'
 import { useHousehold } from '../hooks/useHousehold.js'
 import { currentStreak } from '../lib/streak.js'
 import { sumByPool } from '../lib/budget.js'
@@ -10,10 +11,12 @@ import ReconnectBanner from '../components/ReconnectBanner.jsx'
 
 export default function HomePage() {
   const { expenses } = useExpenses()
+  const { expenses: shared } = useSharedExpenses()
   const { household } = useHousehold()
 
+  // Streak is personal (my own logging); the shared pool spans both partners.
   const streak = currentStreak(expenses.map((e) => e.date))
-  const pools = sumByPool(expenses)
+  const pools = sumByPool(shared)
   const sharedSpent = pools.shared ?? 0
   const sharedTarget = Object.values(household?.sharedTargets ?? {}).reduce((a, b) => a + (Number(b) || 0), 0)
 

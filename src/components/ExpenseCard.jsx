@@ -11,7 +11,7 @@ function formatDate(date) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-export default function ExpenseCard({ expense, onDelete }) {
+export default function ExpenseCard({ expense, onDelete, byPartner = false }) {
   const cat = getCategory(expense.categoryId)
   const isIncome = expense.type === 'income'
   const poolLabel = isIncome ? 'Income' : POOL_LABEL[expense.poolType]
@@ -36,7 +36,7 @@ export default function ExpenseCard({ expense, onDelete }) {
           </div>
         )}
         <div style={{ fontSize: '0.7rem', color: '#64748B' }}>
-          {poolLabel} · {formatDate(expense.date)}
+          {poolLabel} · {formatDate(expense.date)}{byPartner ? ' · Partner' : ''}
         </div>
       </div>
       <div style={{

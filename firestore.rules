@@ -41,9 +41,15 @@ service cloud.firestore {
     }
 
     match /expenses/{expenseId} {
-      allow read: if isUser(resource.data.uid);
+      // Owner can always read their own. Household members can also read
+      // shared/split expenses (so partners see combined shared spending);
+      // personal expenses stay private to their owner.
+      allow read: if isUser(resource.data.uid)
+        || (resource.data.poolType in ['shared', 'split']
+            && isHouseholdMember(resource.data.householdId));
       allow create: if isUser(request.resource.data.uid)
         && isHouseholdMember(request.resource.data.householdId);
+      // Only the owner may edit or delete.
       allow update, delete: if isUser(resource.data.uid);
     }
 

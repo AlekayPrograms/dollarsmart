@@ -156,20 +156,42 @@ describe('expenses collection', () => {
     )
   })
 
-  it('forbids reading another user expense (personal privacy)', async () => {
+  it("forbids reading another user's PERSONAL expense (privacy)", async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'expenses', 'bob_exp'), {
+      await setDoc(doc(ctx.firestore(), 'expenses', 'bob_personal'), {
         amount: 99,
         categoryId: 'shopping',
         uid: BOB,
         householdId: HOUSEHOLD,
         type: 'expense',
-        poolType: 'shared',
+        poolType: 'personal',
         date: new Date(),
       })
     })
     const alice = testEnv.authenticatedContext(ALICE).firestore()
-    await assertFails(getDoc(doc(alice, 'expenses', 'bob_exp')))
+    await assertFails(getDoc(doc(alice, 'expenses', 'bob_personal')))
+  })
+
+  it("lets a household member read a partner's SHARED expense", async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'expenses', 'bob_shared'), {
+        amount: 40, categoryId: 'groceries', uid: BOB, householdId: HOUSEHOLD,
+        type: 'expense', poolType: 'shared', date: new Date(),
+      })
+    })
+    const alice = testEnv.authenticatedContext(ALICE).firestore()
+    await assertSucceeds(getDoc(doc(alice, 'expenses', 'bob_shared')))
+  })
+
+  it("forbids a non-member from reading a household's shared expense", async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'expenses', 'bob_shared2'), {
+        amount: 40, categoryId: 'groceries', uid: BOB, householdId: HOUSEHOLD,
+        type: 'expense', poolType: 'shared', date: new Date(),
+      })
+    })
+    const stranger = testEnv.authenticatedContext('stranger_uid').firestore()
+    await assertFails(getDoc(doc(stranger, 'expenses', 'bob_shared2')))
   })
 
   it('forbids an unauthenticated user from creating an expense', async () => {
