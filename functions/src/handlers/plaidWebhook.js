@@ -4,6 +4,7 @@ const jose = require('jose')
 const { getPlaidClient } = require('../plaidClient')
 const { merchantToCategory } = require('../categoryMap')
 const { makeVerifyWebhook, safeDecodeKid } = require('../webhookVerify')
+const { makeSendTransactionAlert } = require('../notifications')
 
 const PLAID_CLIENT_ID = 'PLAID_CLIENT_ID'
 const PLAID_SECRET = 'PLAID_SECRET'
@@ -22,8 +23,9 @@ function adminDbAdapter() {
   }
 }
 
-// Testable core: pull new transactions for an item and write pending docs.
-function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory }) {
+// Testable core: pull new transactions for an item, write pending docs, and
+// fire a per-transaction push alert.
+function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory, sendAlert }) {
   return async function (itemId) {
     const item = await db.findItemByItemId(itemId)
     if (!item) return
@@ -51,6 +53,7 @@ function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory })
           status: 'pending',
           createdAt: new Date().toISOString(),
         })
+        await sendAlert(item.uid, { ...tx, categoryId }, tx.transaction_id)
       }
       cursor = next
       hasMore = more
@@ -105,7 +108,8 @@ const plaidWebhook = onRequest(
     const db = adminDbAdapter()
     try {
       if (type === 'TRANSACTIONS' && (code === 'SYNC_UPDATES_AVAILABLE' || code === 'DEFAULT_UPDATE' || code === 'INITIAL_UPDATE' || code === 'HISTORICAL_UPDATE')) {
-        const process = makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory })
+        const sendAlert = makeSendTransactionAlert({ db, messaging: admin.messaging() })
+        const process = makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory, sendAlert })
         await process(itemId)
       } else if (type === 'ITEM' && (code === 'ERROR' || code === 'PENDING_EXPIRATION' || code === 'USER_PERMISSION_REVOKED')) {
         await markReauthRequired(db, itemId)

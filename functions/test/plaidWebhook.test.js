@@ -19,8 +19,9 @@ function fakeDb(initialItems) {
 }
 
 describe('makeProcessTransactionsSync', () => {
-  it('writes a pending transaction per added tx and advances the cursor', async () => {
+  it('writes a pending transaction, sends an alert, and advances the cursor', async () => {
     const db = fakeDb({ 'plaidItems/u1': { itemId: 'item-1', accessToken: 'acc', cursor: null } })
+    const alerts = []
     const fakePlaid = {
       transactionsSync: async () => ({
         data: {
@@ -35,6 +36,7 @@ describe('makeProcessTransactionsSync', () => {
     }
     const process = makeProcessTransactionsSync({
       db, getPlaidClient: () => fakePlaid, merchantToCategory: () => 'food',
+      sendAlert: async (uid, tx, pendingId) => { alerts.push({ uid, pendingId, categoryId: tx.categoryId }) },
     })
 
     await process('item-1')
@@ -44,12 +46,13 @@ describe('makeProcessTransactionsSync', () => {
       date: '2026-06-13', status: 'pending',
     })
     expect(db.writes['plaidItems/u1'].data.cursor).toBe('cursor-2')
+    expect(alerts).toEqual([{ uid: 'u1', pendingId: 'tx-1', categoryId: 'food' }])
   })
 
   it('does nothing when the item is unknown', async () => {
     const db = fakeDb({})
     const process = makeProcessTransactionsSync({
-      db, getPlaidClient: () => ({}), merchantToCategory: () => 'other',
+      db, getPlaidClient: () => ({}), merchantToCategory: () => 'other', sendAlert: async () => {},
     })
     await process('item-unknown')
     expect(Object.keys(db.writes)).toHaveLength(0)
