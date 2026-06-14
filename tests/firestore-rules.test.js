@@ -5,7 +5,7 @@ import {
   assertFails,
   assertSucceeds,
 } from '@firebase/rules-unit-testing'
-import { setDoc, getDoc, deleteDoc, doc } from 'firebase/firestore'
+import { setDoc, getDoc, deleteDoc, updateDoc, doc } from 'firebase/firestore'
 
 let testEnv
 
@@ -65,6 +65,63 @@ describe('households collection', () => {
   it('forbids a non-member from reading a household', async () => {
     const stranger = testEnv.authenticatedContext('stranger_uid').firestore()
     await assertFails(getDoc(doc(stranger, 'households', HOUSEHOLD)))
+  })
+})
+
+describe('households — joining via invite', () => {
+  const CAROL = 'carol_uid'
+  const DAVE = 'dave_uid'
+  const JOINABLE = 'joinable_house'
+
+  beforeEach(async () => {
+    // A household with one member and an unused invite, ready to be joined.
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'households', JOINABLE), {
+        memberUids: [ALICE],
+        inviteCode: 'JOIN12',
+        inviteUsed: false,
+      })
+    })
+  })
+
+  it('lets a prospective joiner read a household with an unused invite', async () => {
+    const carol = testEnv.authenticatedContext(CAROL).firestore()
+    await assertSucceeds(getDoc(doc(carol, 'households', JOINABLE)))
+  })
+
+  it('lets a non-member join by adding only themselves and marking it used', async () => {
+    const carol = testEnv.authenticatedContext(CAROL).firestore()
+    await assertSucceeds(
+      updateDoc(doc(carol, 'households', JOINABLE), {
+        memberUids: [ALICE, CAROL],
+        inviteUsed: true,
+      })
+    )
+  })
+
+  it('forbids a joiner from adding someone other than themselves', async () => {
+    const carol = testEnv.authenticatedContext(CAROL).firestore()
+    await assertFails(
+      updateDoc(doc(carol, 'households', JOINABLE), {
+        memberUids: [ALICE, DAVE],
+        inviteUsed: true,
+      })
+    )
+  })
+
+  it('forbids joining once the invite has been used', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'households', JOINABLE), {
+        memberUids: [ALICE], inviteCode: 'JOIN12', inviteUsed: true,
+      })
+    })
+    const carol = testEnv.authenticatedContext(CAROL).firestore()
+    await assertFails(
+      updateDoc(doc(carol, 'households', JOINABLE), {
+        memberUids: [ALICE, CAROL],
+        inviteUsed: true,
+      })
+    )
   })
 })
 

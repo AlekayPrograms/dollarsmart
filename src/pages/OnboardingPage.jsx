@@ -25,8 +25,10 @@ export default function OnboardingPage() {
     setLoading(true)
     setError(null)
     try {
-      const { householdId, inviteCode: code } = await createHousehold(user.uid)
-      await createInviteCode(user.uid, householdId)
+      const { householdId } = await createHousehold(user.uid)
+      // createInviteCode writes the /inviteCodes lookup doc the joiner needs,
+      // so display the code it returns (not createHousehold's, which has none).
+      const code = await createInviteCode(user.uid, householdId)
       setInviteCode(code)
       setView('create')
       setShowInstallPrompt(true)

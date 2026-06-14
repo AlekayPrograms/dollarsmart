@@ -27,7 +27,8 @@ export default function LogPage() {
   const [saving, setSaving] = useState(false)
 
   const amount = normalizeAmount(amountText)
-  const canSave = validateAmount(amount) && categoryId && !saving
+  // Income has no spending category, so it doesn't require one.
+  const canSave = validateAmount(amount) && (type === 'income' || categoryId) && !saving
 
   function handleSplit() {
     if (!validateAmount(amount)) return
@@ -49,7 +50,7 @@ export default function LogPage() {
         uid: user.uid,
         householdId,
         amount,
-        categoryId,
+        categoryId: type === 'income' ? 'other' : categoryId,
         type,
         poolType: type === 'income' ? 'personal' : poolType,
         note,
@@ -86,7 +87,9 @@ export default function LogPage() {
         </div>
       )}
 
-      <CategoryGrid selected={categoryId} onSelect={setCategoryId} />
+      {type === 'expense' && (
+        <CategoryGrid selected={categoryId} onSelect={setCategoryId} />
+      )}
 
       {showDetails && (
         <input

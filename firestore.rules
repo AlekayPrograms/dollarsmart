@@ -12,15 +12,32 @@ service cloud.firestore {
         && request.auth.uid in get(/databases/$(database)/documents/households/$(householdId)).data.memberUids;
     }
 
+    // A non-member may join a household whose invite is still unused, but ONLY
+    // by adding exactly themselves to memberUids and marking the invite used.
+    // Knowledge of the household id comes from the single-use invite code.
+    function isJoiningHousehold() {
+      return request.auth != null
+        && resource.data.inviteUsed == false
+        && !(request.auth.uid in resource.data.memberUids)
+        && (request.auth.uid in request.resource.data.memberUids)
+        && request.resource.data.memberUids.hasAll(resource.data.memberUids)
+        && request.resource.data.memberUids.size() == resource.data.memberUids.size() + 1
+        && request.resource.data.inviteUsed == true;
+    }
+
     match /users/{uid} {
       allow read, write: if isUser(uid);
     }
 
     match /households/{householdId} {
-      allow read: if isHouseholdMember(householdId);
+      // Members can read; a prospective joiner can read a household whose invite
+      // is still unused (to validate the code before joining).
+      allow read: if isHouseholdMember(householdId)
+        || (request.auth != null && resource.data.inviteUsed == false);
       allow create: if request.auth != null
         && request.auth.uid in request.resource.data.memberUids;
-      allow update, delete: if isHouseholdMember(householdId);
+      allow update: if isHouseholdMember(householdId) || isJoiningHousehold();
+      allow delete: if isHouseholdMember(householdId);
     }
 
     match /expenses/{expenseId} {
