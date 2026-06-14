@@ -1,2 +1,8 @@
-// Cloud Functions entry point. Individual handlers are wired in Task 8.
-// Kept minimal here so the project installs and the test harness runs.
+const admin = require('firebase-admin')
+admin.initializeApp()
+
+const { createLinkToken } = require('./src/handlers/createLinkToken')
+const { exchangePublicToken } = require('./src/handlers/exchangePublicToken')
+const { plaidWebhook } = require('./src/handlers/plaidWebhook')
+
+module.exports = { createLinkToken, exchangePublicToken, plaidWebhook }

@@ -5,7 +5,7 @@ import {
   assertFails,
   assertSucceeds,
 } from '@firebase/rules-unit-testing'
-import { setDoc, getDoc, doc } from 'firebase/firestore'
+import { setDoc, getDoc, deleteDoc, doc } from 'firebase/firestore'
 
 let testEnv
 
@@ -126,6 +126,59 @@ describe('expenses collection', () => {
         type: 'expense',
         poolType: 'personal',
         date: new Date(),
+      })
+    )
+  })
+})
+
+describe('plaidItems (server-only)', () => {
+  it('denies any client read', async () => {
+    const alice = testEnv.authenticatedContext(ALICE).firestore()
+    await assertFails(getDoc(doc(alice, 'plaidItems', ALICE)))
+  })
+
+  it('denies any client write', async () => {
+    const alice = testEnv.authenticatedContext(ALICE).firestore()
+    await assertFails(setDoc(doc(alice, 'plaidItems', ALICE), { accessToken: 'x' }))
+  })
+})
+
+describe('pendingTransactions collection', () => {
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'pendingTransactions', 'tx1'), {
+        uid: ALICE,
+        amount: 10,
+        merchantName: 'Chipotle',
+        categoryId: 'food',
+        date: '2026-06-13',
+        status: 'pending',
+      })
+    })
+  })
+
+  it('lets the owner read their pending transaction', async () => {
+    const alice = testEnv.authenticatedContext(ALICE).firestore()
+    await assertSucceeds(getDoc(doc(alice, 'pendingTransactions', 'tx1')))
+  })
+
+  it('forbids another user from reading it', async () => {
+    const bob = testEnv.authenticatedContext(BOB).firestore()
+    await assertFails(getDoc(doc(bob, 'pendingTransactions', 'tx1')))
+  })
+
+  it('lets the owner delete (dismiss) it', async () => {
+    const alice = testEnv.authenticatedContext(ALICE).firestore()
+    await assertSucceeds(deleteDoc(doc(alice, 'pendingTransactions', 'tx1')))
+  })
+
+  it('forbids any client from creating one', async () => {
+    const alice = testEnv.authenticatedContext(ALICE).firestore()
+    await assertFails(
+      setDoc(doc(alice, 'pendingTransactions', 'tx2'), {
+        uid: ALICE,
+        amount: 5,
+        status: 'pending',
       })
     )
   })
