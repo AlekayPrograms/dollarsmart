@@ -11,13 +11,28 @@ import ConnectBankButton from '../components/ConnectBankButton.jsx'
 import HouseholdInvite from '../components/HouseholdInvite.jsx'
 import InstallAppButton from '../components/InstallAppButton.jsx'
 import NotificationSettings from '../components/NotificationSettings.jsx'
+import { leaveHousehold } from '../lib/householdStore.js'
+import { useHousehold } from '../hooks/useHousehold.js'
 
 export default function SettingsPage() {
   const { user, signOutUser } = useAuth()
   const { expenses } = useExpenses()
   const { setPersonalTarget } = useMonthlyTargets()
+  const { householdId } = useHousehold()
   const navigate = useNavigate()
   const [targets, setTargets] = useState({})
+  const [leavingHousehold, setLeavingHousehold] = useState(false)
+
+  async function handleLeaveHousehold() {
+    if (!window.confirm('Leave this household? Your personal expenses stay private, but you\'ll lose access to shared expenses and need to create or join a new household.')) return
+    setLeavingHousehold(true)
+    try {
+      await leaveHousehold(user.uid, householdId)
+    } catch (err) {
+      console.error('Failed to leave household', err)
+      setLeavingHousehold(false)
+    }
+  }
 
   useEffect(() => {
     if (!user) return
@@ -84,6 +99,15 @@ export default function SettingsPage() {
 
       <button className="btn btn-secondary" style={{ width: '100%', maxWidth: 420 }} onClick={handleExport}>
         Export all expenses as CSV
+      </button>
+
+      <button
+        className="btn btn-secondary"
+        style={{ width: '100%', maxWidth: 420, color: '#F87171', borderColor: '#F87171' }}
+        onClick={handleLeaveHousehold}
+        disabled={leavingHousehold || !householdId}
+      >
+        {leavingHousehold ? 'Leaving…' : 'Leave household'}
       </button>
 
       <button className="btn btn-secondary" style={{ width: '100%', maxWidth: 420 }} onClick={() => signOutUser()}>
