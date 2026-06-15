@@ -1,8 +1,7 @@
-import { useState } from 'react'
-import { useAuth } from '../contexts/AuthContext.jsx'
-import { useBankBalance } from '../hooks/useBankBalance.js'
+import { useMemo, useState } from 'react'
+import { useExpenses } from '../hooks/useExpenses.js'
 import { useRecurring } from '../hooks/useRecurring.js'
-import { setBankBalance } from '../lib/bankStore.js'
+import { balanceDelta } from '../lib/expense.js'
 import { forecastBalance, upcomingRecurring } from '../lib/forecast.js'
 import { getCategory } from '../lib/categories.js'
 
@@ -13,73 +12,35 @@ function upcomingLabel(r) {
 }
 
 export default function BankBalanceCard() {
-  const { user } = useAuth()
-  const { balance } = useBankBalance()
+  const { expenses } = useExpenses()
   const { recurring } = useRecurring()
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState('')
   const [showUpcoming, setShowUpcoming] = useState(false)
 
-  function startEdit() {
-    setDraft(balance != null ? String(balance) : '')
-    setEditing(true)
-  }
+  // Balance is purely calculated: total income minus total expenses you've
+  // logged. It is never edited directly — it only moves as entries are logged.
+  const balance = useMemo(
+    () => expenses.reduce((sum, e) => sum + balanceDelta(e.type, e.amount), 0),
+    [expenses],
+  )
 
-  async function commit() {
-    setEditing(false)
-    const v = parseFloat(draft)
-    if (!Number.isNaN(v)) await setBankBalance(user.uid, Math.round(v * 100) / 100)
-  }
-
-  const isLow = balance != null && balance < 0
+  const isLow = balance < 0
   const upcoming = upcomingRecurring(recurring)
   const forecast = forecastBalance(balance, recurring)
-  const showForecast = !editing && balance != null && upcoming.length > 0
+  const showForecast = upcoming.length > 0
 
   return (
     <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <p className="section-label" style={{ margin: 0 }}>Bank balance</p>
-        {!editing && (
-          <button
-            onClick={startEdit}
-            style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, padding: 0 }}
-          >
-            {balance != null ? 'Update' : 'Set'}
-          </button>
-        )}
-      </div>
+      <p className="section-label" style={{ margin: 0 }}>Bank balance</p>
 
-      {editing ? (
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.6rem' }}>
-          <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--muted)' }}>$</span>
-          <input
-            autoFocus
-            type="number"
-            inputMode="decimal"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commit}
-            onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }}
-            placeholder="0.00"
-            style={{
-              flex: 1, padding: '0.4rem 0.6rem', borderRadius: 10, fontSize: '1.2rem', fontWeight: 700,
-              background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none',
-            }}
-          />
-        </div>
-      ) : balance != null ? (
-        <p style={{
-          margin: '0.4rem 0 0', fontSize: '1.9rem', fontWeight: 700, letterSpacing: '-0.02em',
-          fontVariantNumeric: 'tabular-nums', color: isLow ? 'var(--danger)' : 'var(--text)',
-        }}>
-          ${balance.toFixed(2)}
-        </p>
-      ) : (
-        <p style={{ margin: '0.4rem 0 0', fontSize: '0.85rem', color: 'var(--subtle)' }}>
-          Tap <strong>Set</strong> to track what's in your account. It updates as you log.
-        </p>
-      )}
+      <p style={{
+        margin: '0.4rem 0 0', fontSize: '1.9rem', fontWeight: 700, letterSpacing: '-0.02em',
+        fontVariantNumeric: 'tabular-nums', color: isLow ? 'var(--danger)' : 'var(--text)',
+      }}>
+        ${balance.toFixed(2)}
+      </p>
+      <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: 'var(--subtle)' }}>
+        Calculated from your logged income and expenses
+      </p>
 
       {showForecast && (
         <div style={{ marginTop: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.65rem' }}>

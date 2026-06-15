@@ -4,8 +4,6 @@ import { useExpenses } from '../hooks/useExpenses.js'
 import { useSharedExpenses } from '../hooks/useSharedExpenses.js'
 import { useHousehold } from '../hooks/useHousehold.js'
 import { deleteExpense, restoreExpense, updateExpense, voteToRemove, cancelRemovalVote } from '../lib/expenseStore.js'
-import { adjustBankBalance } from '../lib/bankStore.js'
-import { balanceDelta } from '../lib/expense.js'
 import { matchesPeriod, availableYears } from '../lib/expenseFilter.js'
 import ExpenseCard from '../components/ExpenseCard.jsx'
 import FilterBar from '../components/FilterBar.jsx'
@@ -76,13 +74,7 @@ export default function ExpensesPage() {
 
   const handleSaveEdit = useCallback(async (id, updates) => {
     await updateExpense(id, updates)
-    // If the amount changed, shift the balance by the difference. (The edit
-    // modal can't change income/expense type, so the sign is stable.)
-    if (editing && typeof updates.amount === 'number' && updates.amount !== editing.amount) {
-      const delta = balanceDelta(editing.type, updates.amount) - balanceDelta(editing.type, editing.amount)
-      await adjustBankBalance(editing.uid, delta)
-    }
-  }, [editing])
+  }, [])
 
   return (
     <div className="page-center" style={{ justifyContent: 'flex-start', gap: '0.875rem' }}>

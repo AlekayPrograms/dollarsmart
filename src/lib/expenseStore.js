@@ -2,8 +2,6 @@ import {
   collection, addDoc, deleteDoc, updateDoc, doc, serverTimestamp, deleteField,
 } from 'firebase/firestore'
 import { db } from '../firebase/client.js'
-import { adjustBankBalance } from './bankStore.js'
-import { balanceDelta } from './expense.js'
 
 /**
  * Add an expense or income entry.
@@ -37,18 +35,16 @@ export async function addExpense({
     reactions: {},
     createdAt: serverTimestamp(),
   })
-  // Money left (or entered) the logger's account — keep their balance current.
-  await adjustBankBalance(uid, balanceDelta(type, amount))
   return ref.id
 }
 
 /**
- * Delete an expense and reverse its effect on the owner's balance.
- * @param {object} expense - the full expense doc ({ id, uid, type, amount })
+ * Delete an expense. (Balance is calculated from remaining entries, so there's
+ * no stored balance to adjust.)
+ * @param {object} expense - the expense doc ({ id, ... })
  */
 export async function deleteExpense(expense) {
   await deleteDoc(doc(db, 'expenses', expense.id))
-  await adjustBankBalance(expense.uid, -balanceDelta(expense.type, expense.amount))
 }
 
 export async function updateExpense(expenseId, updates) {
@@ -78,7 +74,5 @@ export async function restoreExpense(data) {
     ...rest,
     createdAt: serverTimestamp(),
   })
-  // Re-apply the balance effect that deleteExpense reversed.
-  await adjustBankBalance(rest.uid, balanceDelta(rest.type, rest.amount))
   return ref.id
 }
