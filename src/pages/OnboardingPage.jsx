@@ -56,7 +56,7 @@ export default function OnboardingPage() {
     return (
       <div className="page-center">
         <h1 style={{ marginBottom: '0.5rem' }}>Welcome to DollarSmart</h1>
-        <p style={{ color: '#94A3B8', marginBottom: '2rem' }}>Set up your household to get started.</p>
+        <p style={{ color: 'var(--muted)', marginBottom: '2rem' }}>Set up your household to get started.</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', maxWidth: 320 }}>
           <button className="btn btn-primary" onClick={handleCreate} disabled={loading}>
             Create a household
@@ -67,7 +67,7 @@ export default function OnboardingPage() {
         </div>
         <button
           onClick={() => signOutUser()}
-          style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '0.85rem', cursor: 'pointer', marginTop: '2rem' }}
+          style={{ background: 'none', border: 'none', color: 'var(--subtle)', fontSize: '0.85rem', cursor: 'pointer', marginTop: '2rem' }}
         >
           Sign out
         </button>
@@ -79,15 +79,15 @@ export default function OnboardingPage() {
     return (
       <div className="page-center">
         <h2 style={{ marginBottom: '0.5rem' }}>Your household is ready!</h2>
-        <p style={{ color: '#94A3B8', marginBottom: '1rem' }}>Share this code with your partner:</p>
+        <p style={{ color: 'var(--muted)', marginBottom: '1rem' }}>Share this code with your partner:</p>
         <div style={{
           fontSize: '2.5rem', fontWeight: 700, letterSpacing: '0.3em',
-          background: '#1E293B', padding: '1rem 2rem', borderRadius: 16,
+          background: 'var(--surface-2)', padding: '1rem 2rem', borderRadius: 16,
           marginBottom: '1.5rem', color: '#10B981',
         }}>
           {inviteCode}
         </div>
-        <p style={{ color: '#64748B', fontSize: '0.85rem', marginBottom: '2rem' }}>
+        <p style={{ color: 'var(--subtle)', fontSize: '0.85rem', marginBottom: '2rem' }}>
           Code expires in 24 hours and can only be used once.
         </p>
         <button className="btn btn-primary" onClick={() => navigate('/', { replace: true })}>
@@ -104,7 +104,7 @@ export default function OnboardingPage() {
     return (
       <div className="page-center">
         <h2 style={{ marginBottom: '0.5rem' }}>Join a household</h2>
-        <p style={{ color: '#94A3B8', marginBottom: '1.5rem' }}>Enter the code your partner shared with you.</p>
+        <p style={{ color: 'var(--muted)', marginBottom: '1.5rem' }}>Enter the code your partner shared with you.</p>
         <input
           type="text"
           value={joinCode}
@@ -114,7 +114,7 @@ export default function OnboardingPage() {
           style={{
             fontSize: '2rem', fontWeight: 700, letterSpacing: '0.3em', textAlign: 'center',
             width: '100%', maxWidth: 220, padding: '0.75rem',
-            background: '#1E293B', color: '#F8FAFC', border: '1px solid #334155',
+            background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)',
             borderRadius: 12, marginBottom: '1rem', outline: 'none',
           }}
         />

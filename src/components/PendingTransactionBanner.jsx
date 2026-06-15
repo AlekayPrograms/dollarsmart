@@ -29,15 +29,17 @@ export default function PendingTransactionBanner() {
         prefillCategoryId: tx.categoryId,
         prefillSplit: split,
         pendingId: tx.id,
+        prefillMerchantName: tx.merchantName,
+        prefillDate: tx.date,
       },
     })
   }
 
   return (
     <div style={{
-      width: '100%', maxWidth: 420, background: '#1E293B', borderRadius: 12,
+      width: '100%', maxWidth: 440, background: 'var(--surface)', borderRadius: 14,
       padding: '0.9rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem',
-      color: '#F8FAFC',
+      color: 'var(--text)', border: '1px solid var(--border)',
     }}>
       <div style={{ fontSize: '0.9rem' }}>
         {cat.emoji} Looks like you spent <strong>${tx.amount.toFixed(2)}</strong> at {tx.merchantName} — log it?
@@ -47,7 +49,7 @@ export default function PendingTransactionBanner() {
         <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => logIt(true)}>Split it</button>
         <button
           onClick={dismiss}
-          style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', fontSize: '1.2rem' }}
+          style={{ background: 'none', border: 'none', color: 'var(--subtle)', cursor: 'pointer', fontSize: '1.2rem' }}
           title="Dismiss"
         >×</button>
       </div>

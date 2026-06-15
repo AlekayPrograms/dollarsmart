@@ -4,6 +4,7 @@ export const DEFAULT_PREFS = {
   nudgeTime: '20:00',
   partnerActivity: true,
   approachingTarget: true,
+  weeklyInsight: true,
 }
 
 export function applyPrefDefaults(stored) {

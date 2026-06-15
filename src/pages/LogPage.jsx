@@ -24,6 +24,8 @@ export default function LogPage() {
     prefillCategoryId: location.state?.prefillCategoryId ?? params.get('categoryId') ?? undefined,
     prefillSplit: location.state?.prefillSplit ?? false,
     pendingId: location.state?.pendingId ?? params.get('pendingId') ?? undefined,
+    prefillDate: location.state?.prefillDate ?? params.get('date') ?? undefined,
+    prefillMerchantName: location.state?.prefillMerchantName ?? params.get('merchantName') ?? undefined,
   }
 
   const [amountText, setAmountText] = useState(prefill.prefillAmount != null ? String(prefill.prefillAmount) : '')
@@ -32,6 +34,8 @@ export default function LogPage() {
   const [poolType, setPoolType] = useState(prefill.prefillSplit ? 'split' : 'personal')
   const [showDetails, setShowDetails] = useState(false)
   const [note, setNote] = useState('')
+  const [merchantName, setMerchantName] = useState(prefill.prefillMerchantName ?? '')
+  const [dateStr, setDateStr] = useState(prefill.prefillDate ?? new Date().toISOString().slice(0, 10))
   const [saving, setSaving] = useState(false)
 
   const amount = normalizeAmount(amountText)
@@ -62,6 +66,8 @@ export default function LogPage() {
         type,
         poolType: type === 'income' ? 'personal' : poolType,
         note,
+        merchantName,
+        date: new Date(dateStr + 'T12:00:00'),
       })
       if (prefill.pendingId) {
         await deleteDoc(doc(db, 'pendingTransactions', prefill.pendingId)).catch(() => {})
@@ -75,6 +81,14 @@ export default function LogPage() {
 
   return (
     <div className="page-center" style={{ justifyContent: 'flex-start', paddingTop: '1rem', gap: '0.75rem' }}>
+      {merchantName && (
+        <div style={{ width: '100%', maxWidth: 360, textAlign: 'center' }}>
+          <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--subtle)' }}>
+            From <span style={{ color: 'var(--muted)', fontWeight: 600 }}>{merchantName}</span>
+          </p>
+        </div>
+      )}
+
       <TypeToggle type={type} onChange={handleTypeChange} />
 
       <AmountInput value={amountText} onChange={setAmountText} />
@@ -86,8 +100,8 @@ export default function LogPage() {
             onClick={() => setPoolType(poolType === 'shared' ? 'personal' : 'shared')}
             style={{
               padding: '0.5rem 1rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600,
-              background: poolType === 'shared' ? '#10B981' : '#1E293B',
-              border: '1px solid #334155', color: '#F8FAFC',
+              background: poolType === 'shared' ? '#10B981' : 'var(--surface)',
+              border: '1px solid var(--border)', color: 'var(--text)',
             }}
           >
             {poolType === 'shared' ? 'Shared ✓' : 'Personal'}
@@ -100,21 +114,43 @@ export default function LogPage() {
       )}
 
       {showDetails && (
-        <input
-          type="text"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Add a note (optional)"
-          style={{
-            width: '100%', maxWidth: 360, padding: '0.75rem', borderRadius: 10,
-            background: '#1E293B', border: '1px solid #334155', color: '#F8FAFC', outline: 'none',
-          }}
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', maxWidth: 360 }}>
+          <input
+            type="text"
+            value={merchantName}
+            onChange={(e) => setMerchantName(e.target.value)}
+            placeholder="Company / merchant (optional)"
+            style={{
+              width: '100%', padding: '0.75rem', borderRadius: 10,
+              background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none',
+            }}
+          />
+          <input
+            type="date"
+            value={dateStr}
+            onChange={(e) => setDateStr(e.target.value)}
+            style={{
+              width: '100%', padding: '0.75rem', borderRadius: 10,
+              background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)',
+              outline: 'none', colorScheme: 'dark',
+            }}
+          />
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Add a note (optional)"
+            style={{
+              width: '100%', padding: '0.75rem', borderRadius: 10,
+              background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none',
+            }}
+          />
+        </div>
       )}
 
       <button
         onClick={() => setShowDetails((s) => !s)}
-        style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', fontSize: '0.85rem' }}
+        style={{ background: 'none', border: 'none', color: 'var(--subtle)', cursor: 'pointer', fontSize: '0.85rem' }}
       >
         {showDetails ? '− Hide details' : '+ Add details'}
       </button>

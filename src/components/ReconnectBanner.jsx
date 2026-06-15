@@ -23,7 +23,7 @@ export default function ReconnectBanner() {
 
   return (
     <div style={{
-      width: '100%', maxWidth: 420, background: '#422006', border: '1px solid #92400E',
+      width: '100%', maxWidth: 440, background: '#422006', border: '1px solid #92400E',
       borderRadius: 12, padding: '0.9rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem',
     }}>
       <div style={{ fontSize: '0.9rem', color: '#FDE68A' }}>

@@ -21,7 +21,7 @@ export default function LoginPage() {
   return (
     <div className="page-center">
       <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💸 DollarSmart</h1>
-      <p style={{ color: '#94A3B8', marginBottom: '2rem' }}>Couples budgeting, made simple.</p>
+      <p style={{ color: 'var(--muted)', marginBottom: '2rem' }}>Couples budgeting, made simple.</p>
       <button className="btn btn-primary" onClick={handleSignIn}>
         Sign in with Google
       </button>

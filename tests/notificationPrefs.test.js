@@ -2,13 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { DEFAULT_PREFS, applyPrefDefaults } from '../src/lib/notificationPrefs.js'
 
 describe('DEFAULT_PREFS', () => {
-  it('has all five preference keys with sane defaults', () => {
+  it('has all preference keys with sane defaults', () => {
     expect(DEFAULT_PREFS).toEqual({
       transactionAlert: true,
       dailyNudge: false,
       nudgeTime: '20:00',
       partnerActivity: true,
       approachingTarget: true,
+      weeklyInsight: true,
     })
   })
 })

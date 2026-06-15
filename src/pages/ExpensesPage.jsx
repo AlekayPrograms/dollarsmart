@@ -1,12 +1,13 @@
 import { useState, useMemo, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { useExpenses } from '../hooks/useExpenses.js'
 import { useSharedExpenses } from '../hooks/useSharedExpenses.js'
-import { deleteExpense, restoreExpense } from '../lib/expenseStore.js'
+import { deleteExpense, restoreExpense, updateExpense } from '../lib/expenseStore.js'
+import { matchesPeriod, availableYears } from '../lib/expenseFilter.js'
 import ExpenseCard from '../components/ExpenseCard.jsx'
 import FilterBar from '../components/FilterBar.jsx'
 import UndoToast from '../components/UndoToast.jsx'
+import EditExpenseModal from '../components/EditExpenseModal.jsx'
 
 function dateMs(d) {
   if (!d) return 0
@@ -19,12 +20,10 @@ export default function ExpensesPage() {
   const { user } = useAuth()
   const { expenses: mine, loading } = useExpenses()
   const { expenses: shared } = useSharedExpenses()
-  const navigate = useNavigate()
-  const [filters, setFilters] = useState({ pool: 'all', category: 'all' })
-  const [pendingDelete, setPendingDelete] = useState(null) // the expense being deleted
+  const [filters, setFilters] = useState({ pool: 'all', category: 'all', period: { mode: 'all', value: '' } })
+  const [pendingDelete, setPendingDelete] = useState(null)
+  const [editing, setEditing] = useState(null)
 
-  // All of my expenses + the household's shared/split (both partners), deduped
-  // by id and sorted newest-first.
   const merged = useMemo(() => {
     const map = new Map()
     for (const e of mine) map.set(e.id, e)
@@ -32,11 +31,14 @@ export default function ExpensesPage() {
     return [...map.values()].sort((a, b) => dateMs(b.date) - dateMs(a.date))
   }, [mine, shared])
 
+  const years = useMemo(() => availableYears(merged.map((e) => e.date)), [merged])
+
   const visible = useMemo(() => {
     return merged.filter((e) => {
       if (pendingDelete && e.id === pendingDelete.id) return false
       if (filters.pool !== 'all' && e.poolType !== filters.pool) return false
       if (filters.category !== 'all' && e.categoryId !== filters.category) return false
+      if (!matchesPeriod(e.date, filters.period)) return false
       return true
     })
   }, [merged, filters, pendingDelete])
@@ -53,34 +55,49 @@ export default function ExpensesPage() {
     }
   }, [pendingDelete])
 
-  const handleExpire = useCallback(() => {
-    setPendingDelete(null) // deletion already happened; just clear the toast
+  const handleExpire = useCallback(() => setPendingDelete(null), [])
+
+  const handleUpdateMerchant = useCallback(async (expense, merchantName) => {
+    await updateExpense(expense.id, { merchantName })
+  }, [])
+
+  const handleSaveEdit = useCallback(async (id, updates) => {
+    await updateExpense(id, updates)
   }, [])
 
   return (
-    <div className="page-center" style={{ justifyContent: 'flex-start', paddingTop: '2rem', gap: '1rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: 420, alignItems: 'center' }}>
-        <h2 style={{ margin: 0 }}>Expenses</h2>
-        <button className="btn btn-secondary" onClick={() => navigate('/')}>Home</button>
+    <div className="page-center" style={{ justifyContent: 'flex-start', gap: '0.875rem' }}>
+      <div style={{ width: '100%', maxWidth: 440 }}>
+        <h2 style={{ margin: 0, fontSize: '1.375rem', fontWeight: 700, letterSpacing: '-0.02em' }}>Expenses</h2>
       </div>
 
-      <FilterBar filters={filters} onChange={setFilters} />
+      <FilterBar filters={filters} onChange={setFilters} years={years} />
 
-      {loading && <p style={{ color: '#64748B' }}>Loading…</p>}
+      {loading && <p style={{ color: 'var(--subtle)', fontSize: '0.875rem' }}>Loading…</p>}
       {!loading && visible.length === 0 && (
-        <p style={{ color: '#64748B' }}>No expenses yet. Tap + Log to add one.</p>
+        <p style={{ color: 'var(--subtle)', fontSize: '0.875rem' }}>No expenses match this filter.</p>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', maxWidth: 420 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', maxWidth: 440 }}>
         {visible.map((e) => (
           <ExpenseCard
             key={e.id}
             expense={e}
             byPartner={e.uid !== user?.uid}
             onDelete={e.uid === user?.uid ? handleDelete : undefined}
+            onUpdateMerchant={e.uid === user?.uid ? handleUpdateMerchant : undefined}
+            onEdit={e.uid === user?.uid ? setEditing : undefined}
           />
         ))}
       </div>
+
+      {editing && (
+        <EditExpenseModal
+          expense={editing}
+          onSave={handleSaveEdit}
+          onClose={() => setEditing(null)}
+        />
+      )}
 
       {pendingDelete && (
         <UndoToast

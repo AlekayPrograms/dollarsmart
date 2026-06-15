@@ -1,10 +1,8 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { doc, onSnapshot } from 'firebase/firestore'
-import { db } from '../firebase/client.js'
+import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { useExpenses } from '../hooks/useExpenses.js'
 import { useMonthlyTargets } from '../hooks/useMonthlyTargets.js'
+import { useHousehold } from '../hooks/useHousehold.js'
 import { CATEGORIES } from '../lib/categories.js'
 import { expensesToCsv } from '../lib/csv.js'
 import ConnectBankButton from '../components/ConnectBankButton.jsx'
@@ -12,19 +10,83 @@ import HouseholdInvite from '../components/HouseholdInvite.jsx'
 import InstallAppButton from '../components/InstallAppButton.jsx'
 import NotificationSettings from '../components/NotificationSettings.jsx'
 import { leaveHousehold } from '../lib/householdStore.js'
-import { useHousehold } from '../hooks/useHousehold.js'
+
+function Section({ label, children }) {
+  return (
+    <div style={{ width: '100%', maxWidth: 440 }}>
+      {label && <p className="section-label">{label}</p>}
+      <div className="card" style={{ padding: '0.25rem 0', overflow: 'hidden' }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function Row({ children, style }) {
+  return (
+    <div style={{ padding: '0.75rem 1.125rem', borderBottom: '1px solid var(--border)', ...style }}>
+      {children}
+    </div>
+  )
+}
+
+function LastRow({ children, style }) {
+  return (
+    <div style={{ padding: '0.75rem 1.125rem', ...style }}>
+      {children}
+    </div>
+  )
+}
+
+// A list of per-category monthly target inputs. `targets` is a map of
+// categoryId -> amount; `onSet(categoryId, amount)` persists a single value.
+function TargetList({ targets, onSet }) {
+  return (
+    <>
+      {CATEGORIES.map((cat, i) => {
+        const isLast = i === CATEGORIES.length - 1
+        const Wrap = isLast ? LastRow : Row
+        return (
+          <Wrap key={cat.id}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '1.1rem' }}>{cat.emoji}</span>
+              <span style={{ flex: 1, fontSize: '0.9rem', color: 'var(--muted)' }}>{cat.label}</span>
+              <input
+                key={`${cat.id}:${targets[cat.id] ?? ''}`}
+                type="number"
+                inputMode="decimal"
+                defaultValue={targets[cat.id] ? targets[cat.id] : ''}
+                placeholder="—"
+                onBlur={(e) => {
+                  const raw = e.target.value.trim()
+                  // Blanking the field clears the target (0 = "no target").
+                  if (raw === '') { onSet(cat.id, 0); return }
+                  const v = parseFloat(raw)
+                  if (!Number.isNaN(v)) onSet(cat.id, v)
+                }}
+                style={{
+                  width: 80, padding: '0.35rem 0.5rem', borderRadius: 8, textAlign: 'right',
+                  background: 'var(--surface-2, #243148)', border: '1px solid var(--border)',
+                  color: 'var(--text)', fontSize: '0.9rem',
+                }}
+              />
+            </div>
+          </Wrap>
+        )
+      })}
+    </>
+  )
+}
 
 export default function SettingsPage() {
   const { user, signOutUser } = useAuth()
   const { expenses } = useExpenses()
-  const { setPersonalTarget } = useMonthlyTargets()
+  const { personalTargets, setPersonalTarget, sharedTargets, setSharedTarget } = useMonthlyTargets()
   const { householdId } = useHousehold()
-  const navigate = useNavigate()
-  const [targets, setTargets] = useState({})
   const [leavingHousehold, setLeavingHousehold] = useState(false)
 
   async function handleLeaveHousehold() {
-    if (!window.confirm('Leave this household? Your personal expenses stay private, but you\'ll lose access to shared expenses and need to create or join a new household.')) return
+    if (!window.confirm("Leave this household? You'll lose access to shared expenses and need to create or join a new one.")) return
     setLeavingHousehold(true)
     try {
       await leaveHousehold(user.uid, householdId)
@@ -33,13 +95,6 @@ export default function SettingsPage() {
       setLeavingHousehold(false)
     }
   }
-
-  useEffect(() => {
-    if (!user) return
-    return onSnapshot(doc(db, 'users', user.uid), (snap) => {
-      setTargets(snap.exists() ? (snap.data().monthlyTargets ?? {}) : {})
-    })
-  }, [user])
 
   function handleExport() {
     const csv = expensesToCsv(expenses)
@@ -53,66 +108,80 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="page-center" style={{ justifyContent: 'flex-start', paddingTop: '2rem', gap: '1.25rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: 420, alignItems: 'center' }}>
-        <h2 style={{ margin: 0 }}>Settings</h2>
-        <button className="btn btn-secondary" onClick={() => navigate('/')}>Home</button>
+    <div className="page-center" style={{ justifyContent: 'flex-start', gap: '1.5rem' }}>
+      <div style={{ width: '100%', maxWidth: 440 }}>
+        <h2 style={{ margin: 0, fontSize: '1.375rem', fontWeight: 700, letterSpacing: '-0.02em' }}>Settings</h2>
       </div>
 
       <InstallAppButton />
 
-      <HouseholdInvite />
+      {/* Household */}
+      <div style={{ width: '100%', maxWidth: 440 }}>
+        <p className="section-label">Household</p>
+        <div className="card">
+          <HouseholdInvite />
+        </div>
+      </div>
 
-      <div style={{ width: '100%', maxWidth: 420 }}>
-        <h3 style={{ fontSize: '1rem', color: '#CBD5E1' }}>Monthly targets (personal)</h3>
-        {CATEGORIES.map((cat) => (
-          <div key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <span style={{ width: 28 }}>{cat.emoji}</span>
-            <span style={{ flex: 1, fontSize: '0.9rem' }}>{cat.label}</span>
-            <input
-              // defaultValue only applies on mount; remount via key when the
-              // saved target arrives async so loaded values actually display.
-              key={`${cat.id}:${targets[cat.id] ?? ''}`}
-              type="number"
-              inputMode="decimal"
-              defaultValue={targets[cat.id] ?? ''}
-              placeholder="—"
-              onBlur={(e) => {
-                const v = parseFloat(e.target.value)
-                if (!Number.isNaN(v)) setPersonalTarget(cat.id, v)
-              }}
-              style={{
-                width: 90, padding: '0.4rem', borderRadius: 8, textAlign: 'right',
-                background: '#1E293B', border: '1px solid #334155', color: '#F8FAFC',
-              }}
-            />
+      {/* Monthly targets — personal */}
+      <Section label="Monthly targets — personal">
+        <TargetList targets={personalTargets} onSet={setPersonalTarget} />
+      </Section>
+
+      {/* Monthly targets — shared (only relevant in a household) */}
+      {householdId && (
+        <div style={{ width: '100%', maxWidth: 440 }}>
+          <p className="section-label">Monthly targets — shared</p>
+          <p style={{ margin: '-0.25rem 0 0.5rem', fontSize: '0.75rem', color: 'var(--subtle)' }}>
+            Spending limits for your shared pool, visible to everyone in the household.
+          </p>
+          <div className="card" style={{ padding: '0.25rem 0', overflow: 'hidden' }}>
+            <TargetList targets={sharedTargets} onSet={setSharedTarget} />
           </div>
-        ))}
+        </div>
+      )}
+
+      {/* Notifications */}
+      <div style={{ width: '100%', maxWidth: 440 }}>
+        <NotificationSettings />
       </div>
 
-      <NotificationSettings />
+      {/* Bank */}
+      <Section label="Bank connection">
+        <LastRow>
+          <ConnectBankButton />
+        </LastRow>
+      </Section>
 
-      <div style={{ width: '100%', maxWidth: 420 }}>
-        <h3 style={{ fontSize: '1rem', color: '#CBD5E1' }}>Bank connection</h3>
-        <ConnectBankButton />
+      {/* Data */}
+      <Section label="Data">
+        <Row>
+          <button
+            className="btn btn-secondary"
+            style={{ width: '100%', justifyContent: 'flex-start', background: 'none', border: 'none', padding: 0, fontWeight: 500, color: 'var(--muted)', fontSize: '0.9rem' }}
+            onClick={handleExport}
+          >
+            Export all expenses as CSV
+          </button>
+        </Row>
+        <LastRow>
+          <button
+            className="btn btn-secondary"
+            style={{ width: '100%', justifyContent: 'flex-start', background: 'none', border: 'none', padding: 0, fontWeight: 500, color: 'var(--danger)', fontSize: '0.9rem' }}
+            onClick={handleLeaveHousehold}
+            disabled={leavingHousehold || !householdId}
+          >
+            {leavingHousehold ? 'Leaving…' : 'Leave household'}
+          </button>
+        </LastRow>
+      </Section>
+
+      {/* Account */}
+      <div style={{ width: '100%', maxWidth: 440, paddingBottom: '0.5rem' }}>
+        <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => signOutUser()}>
+          Sign out
+        </button>
       </div>
-
-      <button className="btn btn-secondary" style={{ width: '100%', maxWidth: 420 }} onClick={handleExport}>
-        Export all expenses as CSV
-      </button>
-
-      <button
-        className="btn btn-secondary"
-        style={{ width: '100%', maxWidth: 420, color: '#F87171', borderColor: '#F87171' }}
-        onClick={handleLeaveHousehold}
-        disabled={leavingHousehold || !householdId}
-      >
-        {leavingHousehold ? 'Leaving…' : 'Leave household'}
-      </button>
-
-      <button className="btn btn-secondary" style={{ width: '100%', maxWidth: 420 }} onClick={() => signOutUser()}>
-        Sign out
-      </button>
     </div>
   )
 }

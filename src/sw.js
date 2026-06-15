@@ -29,6 +29,8 @@ onBackgroundMessage(messaging, (payload) => {
   if (data.amount) params.set('amount', data.amount)
   if (data.categoryId) params.set('categoryId', data.categoryId)
   if (data.pendingId) params.set('pendingId', data.pendingId)
+  if (data.date) params.set('date', data.date)
+  if (data.merchantName) params.set('merchantName', data.merchantName)
   self.registration.showNotification(title || 'DollarSmart', {
     body: body || '',
     icon: '/pwa-192x192.png',

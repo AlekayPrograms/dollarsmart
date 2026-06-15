@@ -36,16 +36,15 @@ export default function HouseholdInvite() {
   }
 
   return (
-    <div style={{ width: '100%', maxWidth: 420 }}>
-      <h3 style={{ fontSize: '1rem', color: '#CBD5E1' }}>Household</h3>
-      <p style={{ fontSize: '0.85rem', color: '#94A3B8', marginTop: 0 }}>
+    <div style={{ width: '100%' }}>
+      <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: '0 0 0.75rem' }}>
         {partnerJoined ? 'Your partner has joined. 🎉' : 'Waiting for your partner to join.'}
       </p>
 
       {shareCode && (
         <div style={{
           fontSize: '1.6rem', fontWeight: 700, letterSpacing: '0.25em', textAlign: 'center',
-          background: '#1E293B', border: '1px solid #334155', borderRadius: 12,
+          background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 12,
           padding: '0.75rem', color: '#10B981', marginBottom: '0.6rem',
         }}>
           {shareCode}
@@ -56,7 +55,7 @@ export default function HouseholdInvite() {
         {busy ? 'Generating…' : 'Generate new invite code'}
       </button>
       {error && <p style={{ color: '#F87171', fontSize: '0.8rem', marginTop: 6 }}>{error}</p>}
-      <p style={{ fontSize: '0.75rem', color: '#64748B', marginTop: 6 }}>
+      <p style={{ fontSize: '0.75rem', color: 'var(--subtle)', marginTop: 6 }}>
         Codes are single-use and expire after 24 hours.
       </p>
     </div>

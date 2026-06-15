@@ -7,12 +7,14 @@ const TOGGLES = [
   { key: 'transactionAlert', label: 'Transaction detected' },
   { key: 'partnerActivity', label: 'Partner logged a shared expense' },
   { key: 'approachingTarget', label: 'Approaching a shared target' },
+  { key: 'weeklyInsight', label: 'Weekly spending insight (Monday)' },
+  { key: 'dailyNudge', label: 'Daily logging reminder' },
 ]
 
 function Toggle({ checked, onChange, label }) {
   return (
     <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.6rem' }}>
-      <span style={{ fontSize: '0.9rem', color: '#CBD5E1' }}>{label}</span>
+      <span style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>{label}</span>
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
     </label>
   )
@@ -45,16 +47,16 @@ export default function NotificationSettings() {
 
   return (
     <div style={{ width: '100%', maxWidth: 420 }}>
-      <h3 style={{ fontSize: '1rem', color: '#CBD5E1' }}>Notifications</h3>
+      <h3 style={{ fontSize: '1rem', color: 'var(--muted)' }}>Notifications</h3>
 
       {!supported && (
-        <p style={{ fontSize: '0.85rem', color: '#94A3B8' }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
           Push notifications aren't supported here. On iPhone, add DollarSmart to your Home Screen first.
         </p>
       )}
 
       {supported && permission !== 'granted' && (
-        <div style={{ background: '#1E293B', borderRadius: 10, padding: '0.9rem', marginBottom: '0.75rem', color: '#F8FAFC' }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '0.9rem', marginBottom: '0.75rem', color: 'var(--text)' }}>
           <p style={{ fontSize: '0.85rem', margin: '0 0 0.6rem' }}>
             Get a gentle nudge to log a purchase the moment it happens.
           </p>
@@ -66,7 +68,7 @@ export default function NotificationSettings() {
       )}
 
       {supported && permission === 'granted' && (
-        <div style={{ background: '#1E293B', borderRadius: 10, padding: '0.9rem' }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '0.9rem' }}>
           {TOGGLES.map((t) => (
             <Toggle
               key={t.key}

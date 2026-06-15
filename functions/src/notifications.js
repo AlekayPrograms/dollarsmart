@@ -1,4 +1,4 @@
-function buildTransactionMessage({ token, amount, merchantName, categoryId, pendingId }) {
+function buildTransactionMessage({ token, amount, merchantName = '', categoryId, pendingId, date }) {
   return {
     token,
     notification: {
@@ -9,6 +9,8 @@ function buildTransactionMessage({ token, amount, merchantName, categoryId, pend
       amount: String(amount),
       categoryId: String(categoryId),
       pendingId: String(pendingId),
+      ...(date ? { date: String(date) } : {}),
+      ...(merchantName ? { merchantName: String(merchantName) } : {}),
     },
   }
 }
@@ -21,12 +23,14 @@ function makeSendTransactionAlert({ db, messaging }) {
     const wantsAlert = user.notificationPrefs ? user.notificationPrefs.transactionAlert !== false : true
     if (!token || !wantsAlert) return
     try {
+      const merchantName = tx.merchant_name || tx.merchantName || tx.name || ''
       await messaging.send(buildTransactionMessage({
         token,
         amount: tx.amount,
-        merchantName: tx.merchant_name || tx.merchantName || tx.name || 'Unknown',
+        merchantName,
         categoryId: tx.categoryId,
         pendingId,
+        date: tx.date,
       }))
     } catch (err) {
       console.error('FCM send failed:', err.message || err)
@@ -34,4 +38,63 @@ function makeSendTransactionAlert({ db, messaging }) {
   }
 }
 
-module.exports = { buildTransactionMessage, makeSendTransactionAlert }
+const CATEGORY_LABELS = {
+  groceries: 'groceries', food: 'food', transport: 'transport',
+  shopping: 'shopping', entertainment: 'entertainment', bills: 'bills',
+  health: 'health', travel: 'travel', pets: 'pets', other: 'something',
+}
+
+function buildPartnerActivityMessage({ token, amount, categoryId, poolType }) {
+  const label = CATEGORY_LABELS[categoryId] || 'something'
+  const pool = poolType === 'split' ? 'split' : 'shared'
+  return {
+    token,
+    notification: {
+      title: 'DollarSmart',
+      body: `Partner logged $${Number(amount).toFixed(2)} on ${label} (${pool})`,
+    },
+    data: {},
+  }
+}
+
+function buildApproachingTargetMessage({ token, percent }) {
+  return {
+    token,
+    notification: {
+      title: 'DollarSmart',
+      body: `Heads up — you've used ${percent}% of your shared budget this month`,
+    },
+    data: {},
+  }
+}
+
+function buildDailyNudgeMessage({ token }) {
+  return {
+    token,
+    notification: {
+      title: 'DollarSmart',
+      body: "Don't forget to log today's expenses!",
+    },
+    data: {},
+  }
+}
+
+function buildWeeklyInsightMessage({ token, insight }) {
+  return {
+    token,
+    notification: {
+      title: 'Weekly spending insight',
+      body: insight,
+    },
+    data: {},
+  }
+}
+
+module.exports = {
+  buildTransactionMessage,
+  makeSendTransactionAlert,
+  buildPartnerActivityMessage,
+  buildApproachingTargetMessage,
+  buildDailyNudgeMessage,
+  buildWeeklyInsightMessage,
+}

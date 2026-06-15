@@ -4,8 +4,9 @@ export default function SplitButton({ onSplit, active }) {
       onClick={onSplit}
       style={{
         padding: '0.5rem 1rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600,
-        background: active ? '#10B981' : '#1E293B',
-        border: '1px solid #334155', color: '#F8FAFC',
+        background: active ? 'var(--accent)' : 'var(--surface)',
+        border: '1px solid var(--border)', color: 'var(--text)',
+        transition: 'background 0.15s',
       }}
       title="Split this in half and route to the shared pool"
     >

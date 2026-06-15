@@ -2,52 +2,117 @@ import { Link } from 'react-router-dom'
 import { useExpenses } from '../hooks/useExpenses.js'
 import { useSharedExpenses } from '../hooks/useSharedExpenses.js'
 import { useHousehold } from '../hooks/useHousehold.js'
-import { currentStreak } from '../lib/streak.js'
-import { sumByPool } from '../lib/budget.js'
-import StreakBadge from '../components/StreakBadge.jsx'
+import { useMonthlyTargets } from '../hooks/useMonthlyTargets.js'
+import { sumByPool, sumByCategory, budgetProgress } from '../lib/budget.js'
+import { CATEGORIES } from '../lib/categories.js'
 import ProgressBar from '../components/ProgressBar.jsx'
 import PendingTransactionBanner from '../components/PendingTransactionBanner.jsx'
 import ReconnectBanner from '../components/ReconnectBanner.jsx'
+
+function toMs(date) {
+  if (!date) return 0
+  if (date.toDate) return date.toDate().getTime()
+  return new Date(date).getTime()
+}
+
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
 export default function HomePage() {
   const { expenses } = useExpenses()
   const { expenses: shared } = useSharedExpenses()
   const { household } = useHousehold()
+  const { personalTargets, sharedTargets } = useMonthlyTargets()
 
-  // Streak is personal (my own logging); the shared pool spans both partners.
-  const streak = currentStreak(expenses.map((e) => e.date))
-  const pools = sumByPool(shared)
-  const sharedSpent = pools.shared ?? 0
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+  const monthName = MONTH_NAMES[now.getMonth()]
+
+  const myThisMonth = expenses.filter((e) => toMs(e.date) >= monthStart)
+  const spentByCategory = sumByCategory(myThisMonth)
+
+  // Shared pool = both shared and split expenses for the current month, matching
+  // the backend's approaching-target alert in functions/src/handlers/expenseTrigger.js
+  const sharedThisMonth = shared.filter((e) => toMs(e.date) >= monthStart)
+  const sharedPools = sumByPool(sharedThisMonth)
+  const sharedSpent = (sharedPools.shared ?? 0) + (sharedPools.split ?? 0)
   const sharedTarget = Object.values(household?.sharedTargets ?? {}).reduce((a, b) => a + (Number(b) || 0), 0)
 
-  return (
-    <div className="page-center" style={{ justifyContent: 'flex-start', paddingTop: '1.25rem', gap: '0.75rem' }}>
-      <h1 style={{ margin: 0 }}>💸 DollarSmart</h1>
+  const budgetRows = CATEGORIES.filter((c) =>
+    (spentByCategory[c.id] ?? 0) > 0 || (personalTargets[c.id] ?? 0) > 0
+  )
 
-      <StreakBadge streak={streak} />
+  return (
+    <div className="page-center" style={{ justifyContent: 'flex-start', gap: '1rem' }}>
+      <div style={{ width: '100%', maxWidth: 440, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--subtle)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>
+            {monthName}
+          </p>
+          <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em' }}>DollarSmart</h1>
+        </div>
+        <Link to="/log" className="btn btn-primary" style={{ textDecoration: 'none', padding: '0.6rem 1.2rem' }}>
+          + Log
+        </Link>
+      </div>
 
       <PendingTransactionBanner />
-
       <ReconnectBanner />
 
       {sharedTarget > 0 && (
-        <div style={{ width: '100%', maxWidth: 420 }}>
-          <ProgressBar spent={sharedSpent} target={sharedTarget} label="Shared pool this month" />
+        <div className="card">
+          <p className="section-label">Shared Pool</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+              ${sharedSpent.toFixed(0)}
+            </span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--subtle)', fontVariantNumeric: 'tabular-nums' }}>
+              of ${sharedTarget.toFixed(0)}
+            </span>
+          </div>
+          <ProgressBar spent={sharedSpent} target={sharedTarget} />
+          <p style={{ margin: '0.5rem 0 0', fontSize: '0.78rem', color: 'var(--subtle)' }}>
+            ${Math.max(0, sharedTarget - sharedSpent).toFixed(0)} remaining this month
+          </p>
         </div>
       )}
 
-      <Link to="/log" className="btn btn-primary" style={{ textDecoration: 'none' }}>
-        + Log
-      </Link>
+      {budgetRows.length > 0 && (
+        <div className="card">
+          <p className="section-label">Personal Budget</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+            {budgetRows.map((cat) => {
+              const spent = spentByCategory[cat.id] ?? 0
+              const target = personalTargets[cat.id] ?? 0
+              const { status } = budgetProgress(spent, target)
+              return (
+                <div key={cat.id}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                    <span style={{ fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span>{cat.emoji}</span>
+                      <span style={{ color: 'var(--muted)' }}>{cat.label}</span>
+                    </span>
+                    <span style={{
+                      fontSize: '0.8rem',
+                      fontVariantNumeric: 'tabular-nums',
+                      color: status === 'over' ? 'var(--danger)' : status === 'warn' ? 'var(--warn)' : 'var(--subtle)',
+                    }}>
+                      ${spent.toFixed(0)}{target > 0 ? ` / $${target.toFixed(0)}` : ''}
+                    </span>
+                  </div>
+                  <ProgressBar spent={spent} target={target} color={target > 0 ? undefined : cat.color} />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
-      <div style={{ display: 'flex', gap: '1rem' }}>
-        <Link to="/expenses" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
-          Expenses
-        </Link>
-        <Link to="/settings" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
-          Settings
-        </Link>
-      </div>
+      {sharedTarget === 0 && budgetRows.length === 0 && (
+        <div style={{ color: 'var(--subtle)', fontSize: '0.875rem', textAlign: 'center', paddingTop: '2rem' }}>
+          <p style={{ margin: 0 }}>No expenses or targets yet.</p>
+          <p style={{ margin: '0.25rem 0 0' }}>Tap <strong>+ Log</strong> to get started.</p>
+        </div>
+      )}
     </div>
   )
 }

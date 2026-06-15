@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext.jsx'
 import App from './App.jsx'
+import './App.css'
 import './firebase/client.js'
 
 createRoot(document.getElementById('root')).render(

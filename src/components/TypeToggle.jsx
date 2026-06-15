@@ -1,8 +1,6 @@
 export default function TypeToggle({ type, onChange }) {
   return (
-    <div style={{
-      display: 'inline-flex', background: '#1E293B', borderRadius: 10, padding: 4,
-    }}>
+    <div style={{ display: 'inline-flex', background: 'var(--surface)', borderRadius: 10, padding: 4 }}>
       {['expense', 'income'].map((t) => (
         <button
           key={t}
@@ -10,8 +8,9 @@ export default function TypeToggle({ type, onChange }) {
           style={{
             padding: '0.4rem 1.1rem', borderRadius: 8, border: 'none', cursor: 'pointer',
             fontWeight: 600, textTransform: 'capitalize',
-            background: type === t ? (t === 'income' ? '#10B981' : '#334155') : 'transparent',
-            color: '#F8FAFC',
+            background: type === t ? (t === 'income' ? 'var(--accent)' : 'var(--surface-2)') : 'transparent',
+            color: 'var(--text)',
+            transition: 'background 0.15s',
           }}
         >
           {t}

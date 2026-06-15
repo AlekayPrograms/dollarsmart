@@ -12,7 +12,7 @@ describe('buildTransactionMessage', () => {
     expect(msg.token).toBe('tok-1')
     expect(msg.notification.title).toBe('DollarSmart')
     expect(msg.notification.body).toBe('Looks like you spent $24.50 at Chipotle — log it?')
-    expect(msg.data).toEqual({ amount: '24.5', categoryId: 'food', pendingId: 'tx-1' })
+    expect(msg.data).toEqual({ amount: '24.5', categoryId: 'food', pendingId: 'tx-1', merchantName: 'Chipotle' })
   })
 })
 
