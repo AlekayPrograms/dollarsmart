@@ -91,6 +91,23 @@ describe('makeProcessTransactionsSync', () => {
     expect(alerts).toEqual([{ uid: 'u1', pendingId: 'tx-inc', categoryId: 'other' }])
   })
 
+  it('treats an incoming Zelle as income even without an income category', async () => {
+    const db = fakeDb({ 'plaidItems/u1': { itemId: 'item-1', accessToken: 'acc', cursor: null } })
+    const { process, alerts } = makeSync(db, {
+      added: [
+        { transaction_id: 'tx-z', amount: -75, merchant_name: '', name: 'Zelle payment from JOHN DOE', date: '2026-06-15', pending: false,
+          personal_finance_category: { primary: 'OTHER' } },
+      ],
+    })
+
+    await process('item-1')
+
+    expect(db.writes['pendingTransactions/tx-z'].data).toMatchObject({
+      uid: 'u1', amount: 75, entryType: 'income', merchantName: 'Zelle payment from JOHN DOE',
+    })
+    expect(alerts).toHaveLength(1)
+  })
+
   it('skips inflows that are not income (e.g. refunds / transfers out)', async () => {
     const db = fakeDb({ 'plaidItems/u1': { itemId: 'item-1', accessToken: 'acc', cursor: null } })
     const { process, alerts } = makeSync(db, {
