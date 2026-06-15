@@ -35,16 +35,25 @@ function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory, s
     let hasMore = true
     while (hasMore) {
       const res = await plaid.transactionsSync({ access_token: item.data.accessToken, cursor })
-      const { added, has_more: more, next_cursor: next } = res.data
-      for (const tx of added) {
-        // Plaid uses positive amounts for outflow (spending) and negative for
-        // inflow (refunds, payments received). Only prompt to log spending.
-        if (!(tx.amount > 0)) continue
+      const { added = [], modified = [], removed = [], has_more: more, next_cursor: next } = res.data
+
+      // Only enqueue a transaction once it has POSTED. Plaid surfaces each
+      // transaction first as pending and again when it posts, so logging on
+      // pending would prompt the user twice and use a non-final (preauth)
+      // amount. The posted transition arrives either as a fresh `added` row
+      // (new id) or as a `modified` row flipping `pending` to false (same id),
+      // so we consider both. Keyed by transaction_id, this is idempotent.
+      for (const tx of [...added, ...modified]) {
+        if (tx.pending) continue          // wait for it to post
+        if (!(tx.amount > 0)) continue     // outflow (spending) only
+        const ref = db.doc(`pendingTransactions/${tx.transaction_id}`)
+        const existing = await ref.get()
+        if (existing.exists) continue      // already queued — don't double-prompt
         const categoryId = merchantToCategory(
           tx.merchant_name || tx.name,
           tx.personal_finance_category && tx.personal_finance_category.primary,
         )
-        await db.doc(`pendingTransactions/${tx.transaction_id}`).set({
+        await ref.set({
           uid: item.uid,
           amount: tx.amount,
           merchantName: tx.merchant_name || tx.name || 'Unknown',
@@ -55,6 +64,13 @@ function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory, s
         })
         await sendAlert(item.uid, { ...tx, categoryId }, tx.transaction_id)
       }
+
+      // When a pending row is removed (e.g. replaced by its posted version),
+      // clear any queue entry we may have created for it under that id.
+      for (const r of removed) {
+        await db.doc(`pendingTransactions/${r.transaction_id || r}`).delete()
+      }
+
       cursor = next
       hasMore = more
       // Persist the cursor after each page so a mid-pagination failure resumes
