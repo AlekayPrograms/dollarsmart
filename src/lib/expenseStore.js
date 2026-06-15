@@ -1,5 +1,5 @@
 import {
-  collection, addDoc, deleteDoc, updateDoc, doc, serverTimestamp,
+  collection, addDoc, deleteDoc, updateDoc, doc, serverTimestamp, deleteField,
 } from 'firebase/firestore'
 import { db } from '../firebase/client.js'
 import { adjustBankBalance } from './bankStore.js'
@@ -53,6 +53,19 @@ export async function deleteExpense(expense) {
 
 export async function updateExpense(expenseId, updates) {
   await updateDoc(doc(db, 'expenses', expenseId), updates)
+}
+
+/**
+ * Cast a vote to remove a shared/split expense. When every household member
+ * has voted, a Cloud Function deletes it and reverses the owner's balance.
+ */
+export async function voteToRemove(expenseId, uid) {
+  await updateDoc(doc(db, 'expenses', expenseId), { [`removalVotes.${uid}`]: true })
+}
+
+/** Withdraw a previously-cast removal vote. */
+export async function cancelRemovalVote(expenseId, uid) {
+  await updateDoc(doc(db, 'expenses', expenseId), { [`removalVotes.${uid}`]: deleteField() })
 }
 
 /**

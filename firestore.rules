@@ -49,8 +49,17 @@ service cloud.firestore {
             && isHouseholdMember(resource.data.householdId));
       allow create: if isUser(request.resource.data.uid)
         && isHouseholdMember(request.resource.data.householdId);
-      // Only the owner may edit or delete.
-      allow update, delete: if isUser(resource.data.uid);
+      // The owner may edit anything. A household member may ALSO update a
+      // shared/split expense, but only to cast/withdraw a removal vote
+      // (changing nothing but the removalVotes field). Both partners voting
+      // triggers a Cloud Function that performs the actual delete.
+      allow update: if isUser(resource.data.uid)
+        || (resource.data.poolType in ['shared', 'split']
+            && isHouseholdMember(resource.data.householdId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['removalVotes']));
+      // Only the owner may delete directly (personal expenses); shared removals
+      // go through the vote + Cloud Function (Admin SDK, which bypasses rules).
+      allow delete: if isUser(resource.data.uid);
     }
 
     // recurringExpenses/{ruleId}: a user's monthly recurring-expense templates.

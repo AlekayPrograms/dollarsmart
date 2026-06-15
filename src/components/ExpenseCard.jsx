@@ -12,11 +12,24 @@ function formatDate(date) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-export default function ExpenseCard({ expense, onDelete, onUpdateMerchant, onEdit, byPartner = false }) {
+const voteBtn = {
+  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+  fontSize: '0.68rem', fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1,
+}
+
+export default function ExpenseCard({
+  expense, onDelete, onUpdateMerchant, onEdit,
+  onVoteRemove, onCancelVote, currentUid, memberUids = [], byPartner = false,
+}) {
   const cat = getCategory(expense.categoryId)
   const isIncome = expense.type === 'income'
   const badge = isIncome ? { label: 'Income', color: 'rgba(16,185,129,0.15)' } : (POOL_BADGE[expense.poolType] ?? POOL_BADGE.personal)
   const canEdit = !!onUpdateMerchant && !isIncome
+
+  const isShared = !isIncome && (expense.poolType === 'shared' || expense.poolType === 'split')
+  const votes = expense.removalVotes || {}
+  const iVoted = currentUid ? !!votes[currentUid] : false
+  const partnerVoted = memberUids.some((u) => u !== currentUid && votes[u])
 
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(expense.merchantName || '')
@@ -137,7 +150,25 @@ export default function ExpenseCard({ expense, onDelete, onUpdateMerchant, onEdi
               ✎
             </button>
           )}
-          {onDelete && (
+
+          {/* Shared/split expenses are removed by mutual vote, not deleted. */}
+          {isShared && onVoteRemove ? (
+            iVoted && partnerVoted ? (
+              <span style={{ fontSize: '0.66rem', color: 'var(--subtle)' }}>removing…</span>
+            ) : partnerVoted && !iVoted ? (
+              <button style={{ ...voteBtn, color: 'var(--danger)' }} title="Both must agree to remove" onClick={() => onVoteRemove(expense)}>
+                Confirm remove
+              </button>
+            ) : iVoted ? (
+              <button style={{ ...voteBtn, color: 'var(--warn)' }} title="Cancel your removal request" onClick={() => onCancelVote(expense)}>
+                Pending ✕
+              </button>
+            ) : (
+              <button style={{ ...voteBtn, color: 'var(--subtle)' }} title="Request removal (needs both of you)" onClick={() => onVoteRemove(expense)}>
+                Remove
+              </button>
+            )
+          ) : onDelete ? (
             <button
               onClick={() => onDelete(expense)}
               style={{ background: 'none', border: 'none', color: 'var(--subtle)', cursor: 'pointer', fontSize: '1.1rem', padding: 0, lineHeight: 1 }}
@@ -145,7 +176,7 @@ export default function ExpenseCard({ expense, onDelete, onUpdateMerchant, onEdi
             >
               ×
             </button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

@@ -95,6 +95,28 @@ function buildDailyNudgeMessage({ token }) {
   }
 }
 
+function buildRemovalVoteMessage({ token }) {
+  return {
+    token,
+    notification: {
+      title: 'DollarSmart',
+      body: 'Your partner wants to remove a shared expense — open the app to confirm',
+    },
+    data: {},
+  }
+}
+
+function buildRemovalCompleteMessage({ token }) {
+  return {
+    token,
+    notification: {
+      title: 'DollarSmart',
+      body: 'A shared expense was removed (you both agreed)',
+    },
+    data: {},
+  }
+}
+
 function buildWeeklyInsightMessage({ token, insight }) {
   return {
     token,
@@ -114,4 +136,6 @@ module.exports = {
   buildApproachingTargetMessage,
   buildDailyNudgeMessage,
   buildWeeklyInsightMessage,
+  buildRemovalVoteMessage,
+  buildRemovalCompleteMessage,
 }

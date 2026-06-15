@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { useExpenses } from '../hooks/useExpenses.js'
 import { useSharedExpenses } from '../hooks/useSharedExpenses.js'
-import { deleteExpense, restoreExpense, updateExpense } from '../lib/expenseStore.js'
+import { useHousehold } from '../hooks/useHousehold.js'
+import { deleteExpense, restoreExpense, updateExpense, voteToRemove, cancelRemovalVote } from '../lib/expenseStore.js'
 import { adjustBankBalance } from '../lib/bankStore.js'
 import { balanceDelta } from '../lib/expense.js'
 import { matchesPeriod, availableYears } from '../lib/expenseFilter.js'
@@ -22,6 +23,8 @@ export default function ExpensesPage() {
   const { user } = useAuth()
   const { expenses: mine, loading } = useExpenses()
   const { expenses: shared } = useSharedExpenses()
+  const { household } = useHousehold()
+  const memberUids = household?.memberUids ?? []
   const [filters, setFilters] = useState({ pool: 'all', category: 'all', period: { mode: 'all', value: '' } })
   const [pendingDelete, setPendingDelete] = useState(null)
   const [editing, setEditing] = useState(null)
@@ -63,6 +66,14 @@ export default function ExpensesPage() {
     await updateExpense(expense.id, { merchantName })
   }, [])
 
+  const handleVoteRemove = useCallback(async (expense) => {
+    await voteToRemove(expense.id, user.uid)
+  }, [user])
+
+  const handleCancelVote = useCallback(async (expense) => {
+    await cancelRemovalVote(expense.id, user.uid)
+  }, [user])
+
   const handleSaveEdit = useCallback(async (id, updates) => {
     await updateExpense(id, updates)
     // If the amount changed, shift the balance by the difference. (The edit
@@ -92,7 +103,11 @@ export default function ExpensesPage() {
             key={e.id}
             expense={e}
             byPartner={e.uid !== user?.uid}
-            onDelete={e.uid === user?.uid ? handleDelete : undefined}
+            currentUid={user?.uid}
+            memberUids={memberUids}
+            onDelete={e.uid === user?.uid && e.poolType !== 'shared' && e.poolType !== 'split' ? handleDelete : undefined}
+            onVoteRemove={e.poolType === 'shared' || e.poolType === 'split' ? handleVoteRemove : undefined}
+            onCancelVote={e.poolType === 'shared' || e.poolType === 'split' ? handleCancelVote : undefined}
             onUpdateMerchant={e.uid === user?.uid ? handleUpdateMerchant : undefined}
             onEdit={e.uid === user?.uid ? setEditing : undefined}
           />
