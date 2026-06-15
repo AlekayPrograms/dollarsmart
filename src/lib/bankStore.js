@@ -16,12 +16,3 @@ export async function adjustBankBalance(uid, delta) {
   if (!uid || !delta) return
   await setDoc(doc(db, 'users', uid), { bankBalance: increment(delta) }, { merge: true })
 }
-
-/**
- * How a logged entry moves the balance: expenses subtract, income adds.
- * @param {'expense'|'income'} type
- * @param {number} amount
- */
-export function balanceDelta(type, amount) {
-  return type === 'income' ? amount : -amount
-}

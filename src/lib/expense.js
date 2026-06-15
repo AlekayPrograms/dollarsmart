@@ -20,6 +20,15 @@ export function splitInHalf(amount) {
   return roundCents(amount / 2)
 }
 
+/**
+ * How a logged entry moves a bank balance: expenses subtract, income adds.
+ * @param {'expense'|'income'} type
+ * @param {number} amount
+ */
+export function balanceDelta(type, amount) {
+  return type === 'income' ? amount : -amount
+}
+
 function roundCents(value) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }

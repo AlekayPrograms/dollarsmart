@@ -73,16 +73,17 @@ export default function LogPage() {
         merchantName,
         date: new Date(dateStr + 'T12:00:00'),
       })
-      // Set up a monthly repeat (expenses only). We just logged this month's, so
-      // stamp lastPostedMonth to the current month to avoid an immediate re-post.
-      if (repeatMonthly && type === 'expense') {
+      // Set up a monthly repeat. We just logged this month's, so stamp
+      // lastPostedMonth to the current month to avoid an immediate re-post.
+      // Income recurs as personal with no spending category.
+      if (repeatMonthly) {
         await addRecurring({
           uid: user.uid,
           householdId,
           amount,
-          categoryId,
-          type: 'expense',
-          poolType,
+          categoryId: type === 'income' ? 'other' : categoryId,
+          type,
+          poolType: type === 'income' ? 'personal' : poolType,
           note,
           merchantName,
           dayOfMonth: Math.min(Math.max(Number(repeatDay) || 1, 1), 31),
@@ -167,10 +168,9 @@ export default function LogPage() {
             }}
           />
 
-          {type === 'expense' && (
-            <div style={{
-              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '0.75rem',
-            }}>
+          <div style={{
+            background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '0.75rem',
+          }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
@@ -178,7 +178,9 @@ export default function LogPage() {
                   onChange={(e) => setRepeatMonthly(e.target.checked)}
                   style={{ width: 18, height: 18, accentColor: 'var(--accent)' }}
                 />
-                <span style={{ fontSize: '0.9rem', color: 'var(--text)' }}>Repeat every month</span>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text)' }}>
+                  Repeat every month{type === 'income' ? ' (income)' : ''}
+                </span>
               </label>
               {repeatMonthly && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.6rem' }}>
@@ -203,7 +205,6 @@ export default function LogPage() {
                 </p>
               )}
             </div>
-          )}
         </div>
       )}
 

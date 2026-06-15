@@ -2,7 +2,8 @@ import {
   collection, addDoc, deleteDoc, updateDoc, doc, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../firebase/client.js'
-import { adjustBankBalance, balanceDelta } from './bankStore.js'
+import { adjustBankBalance } from './bankStore.js'
+import { balanceDelta } from './expense.js'
 
 /**
  * Add an expense or income entry.
