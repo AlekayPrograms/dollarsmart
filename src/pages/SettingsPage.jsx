@@ -3,7 +3,9 @@ import { useAuth } from '../contexts/AuthContext.jsx'
 import { useExpenses } from '../hooks/useExpenses.js'
 import { useMonthlyTargets } from '../hooks/useMonthlyTargets.js'
 import { useHousehold } from '../hooks/useHousehold.js'
-import { CATEGORIES } from '../lib/categories.js'
+import { useRecurring } from '../hooks/useRecurring.js'
+import { deleteRecurring, setRecurringActive } from '../lib/recurringStore.js'
+import { CATEGORIES, getCategory } from '../lib/categories.js'
 import { expensesToCsv } from '../lib/csv.js'
 import ConnectBankButton from '../components/ConnectBankButton.jsx'
 import HouseholdInvite from '../components/HouseholdInvite.jsx'
@@ -83,6 +85,7 @@ export default function SettingsPage() {
   const { expenses } = useExpenses()
   const { personalTargets, setPersonalTarget, sharedTargets, setSharedTarget } = useMonthlyTargets()
   const { householdId } = useHousehold()
+  const { recurring } = useRecurring()
   const [leavingHousehold, setLeavingHousehold] = useState(false)
 
   async function handleLeaveHousehold() {
@@ -139,6 +142,45 @@ export default function SettingsPage() {
             <TargetList targets={sharedTargets} onSet={setSharedTarget} />
           </div>
         </div>
+      )}
+
+      {/* Recurring expenses */}
+      {recurring.length > 0 && (
+        <Section label="Recurring expenses">
+          {recurring.map((r, i) => {
+            const cat = getCategory(r.categoryId)
+            const isLast = i === recurring.length - 1
+            const Wrap = isLast ? LastRow : Row
+            return (
+              <Wrap key={r.id}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <span style={{ fontSize: '1.2rem', opacity: r.active === false ? 0.4 : 1 }}>{cat.emoji}</span>
+                  <div style={{ flex: 1, minWidth: 0, opacity: r.active === false ? 0.5 : 1 }}>
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text)' }}>
+                      ${Number(r.amount).toFixed(2)} · {r.merchantName || cat.label}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--subtle)' }}>
+                      Day {r.dayOfMonth} each month{r.active === false ? ' · paused' : ''}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setRecurringActive(r.id, r.active === false)}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}
+                  >
+                    {r.active === false ? 'Resume' : 'Pause'}
+                  </button>
+                  <button
+                    onClick={() => { if (window.confirm('Remove this recurring expense?')) deleteRecurring(r.id) }}
+                    style={{ background: 'none', border: 'none', color: 'var(--subtle)', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1 }}
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                </div>
+              </Wrap>
+            )
+          })}
+        </Section>
       )}
 
       {/* Notifications */}

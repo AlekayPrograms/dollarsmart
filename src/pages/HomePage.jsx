@@ -8,6 +8,7 @@ import { CATEGORIES } from '../lib/categories.js'
 import ProgressBar from '../components/ProgressBar.jsx'
 import PendingTransactionBanner from '../components/PendingTransactionBanner.jsx'
 import ReconnectBanner from '../components/ReconnectBanner.jsx'
+import BankBalanceCard from '../components/BankBalanceCard.jsx'
 
 function toMs(date) {
   if (!date) return 0
@@ -57,6 +58,8 @@ export default function HomePage() {
 
       <PendingTransactionBanner />
       <ReconnectBanner />
+
+      <BankBalanceCard />
 
       {sharedTarget > 0 && (
         <div className="card">

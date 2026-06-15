@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import AuthGate from './components/AuthGate.jsx'
 import HouseholdGate from './components/HouseholdGate.jsx'
 import BottomNav from './components/BottomNav.jsx'
+import RecurringRunner from './components/RecurringRunner.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import OnboardingPage from './pages/OnboardingPage.jsx'
 import HomePage from './pages/HomePage.jsx'
@@ -29,6 +30,7 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {showNav && <BottomNav />}
+      <RecurringRunner />
     </>
   )
 }

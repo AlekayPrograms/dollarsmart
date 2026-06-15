@@ -60,7 +60,7 @@ export default function EditExpenseModal({ expense, onSave, onClose }) {
     <div
       onClick={onClose}
       style={{
-        position: 'fixed', inset: 0, zIndex: 100,
+        position: 'fixed', inset: 0, zIndex: 200,
         background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
       }}

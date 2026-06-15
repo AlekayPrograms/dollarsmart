@@ -1,13 +1,14 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useExpenses } from '../hooks/useExpenses.js'
 import { monthlyTotals, categoryBreakdown } from '../lib/trends.js'
 import { getCategory } from '../lib/categories.js'
 
-function toMs(date) {
-  if (!date) return 0
-  if (date.toDate) return date.toDate().getTime()
-  if (date instanceof Date) return date.getTime()
-  return new Date(date).getTime()
+// 'YYYY-MM' key for a stored date (Firestore Timestamp | Date | string).
+function monthKeyOf(date) {
+  if (!date) return ''
+  const d = date.toDate ? date.toDate() : (date instanceof Date ? date : new Date(date))
+  if (Number.isNaN(d.getTime())) return ''
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
@@ -19,9 +20,18 @@ export default function InsightsPage() {
   const maxMonth = Math.max(1, ...months.map((m) => m.total))
 
   const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
-  const thisMonth = useMemo(() => expenses.filter((e) => toMs(e.date) >= monthStart), [expenses, monthStart])
-  const breakdown = useMemo(() => categoryBreakdown(thisMonth), [thisMonth])
+  const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const [selectedKey, setSelectedKey] = useState(currentKey)
+
+  // Label the breakdown for the selected month (add the year if it isn't this one).
+  const [selYear, selMonth] = selectedKey.split('-').map(Number)
+  const selectedLabel = MONTH_NAMES[selMonth - 1] + (selYear !== now.getFullYear() ? ` ${selYear}` : '')
+
+  const selectedExpenses = useMemo(
+    () => expenses.filter((e) => monthKeyOf(e.date) === selectedKey),
+    [expenses, selectedKey],
+  )
+  const breakdown = useMemo(() => categoryBreakdown(selectedExpenses), [selectedExpenses])
   const monthTotal = breakdown.reduce((a, b) => a + b.total, 0)
 
   // Build a conic-gradient ring from the category shares.
@@ -47,15 +57,24 @@ export default function InsightsPage() {
 
       {loading && <p style={{ color: 'var(--subtle)', fontSize: '0.875rem' }}>Loading…</p>}
 
-      {/* Monthly spending bar chart */}
+      {/* Monthly spending bar chart — tap a month to see its breakdown below */}
       <div className="card">
         <p className="section-label">Spending — last 6 months</p>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', height: 140, paddingTop: '0.5rem' }}>
           {months.map((m) => {
             const h = Math.round((m.total / maxMonth) * 100)
-            const isCurrent = m === months[months.length - 1]
+            const isSelected = m.key === selectedKey
             return (
-              <div key={m.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', height: '100%', justifyContent: 'flex-end' }}>
+              <button
+                key={m.key}
+                onClick={() => setSelectedKey(m.key)}
+                aria-pressed={isSelected}
+                style={{
+                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem',
+                  height: '100%', justifyContent: 'flex-end', background: 'none', border: 'none',
+                  padding: 0, cursor: 'pointer',
+                }}
+              >
                 <span style={{ fontSize: '0.62rem', color: 'var(--subtle)', fontVariantNumeric: 'tabular-nums' }}>
                   {m.total > 0 ? `$${m.total.toFixed(0)}` : ''}
                 </span>
@@ -63,24 +82,26 @@ export default function InsightsPage() {
                   style={{
                     width: '100%', maxWidth: 34, borderRadius: '6px 6px 2px 2px',
                     height: `${Math.max(h, m.total > 0 ? 4 : 1)}%`,
-                    background: isCurrent ? 'var(--accent)' : 'rgba(255,255,255,0.18)',
-                    transition: 'height 0.4s cubic-bezier(0.4,0,0.2,1)',
+                    background: isSelected ? 'var(--accent)' : 'rgba(255,255,255,0.18)',
+                    transition: 'height 0.4s cubic-bezier(0.4,0,0.2,1), background 0.15s',
                   }}
                 />
-                <span style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>{m.label}</span>
-              </div>
+                <span style={{ fontSize: '0.65rem', fontWeight: isSelected ? 700 : 500, color: isSelected ? 'var(--text)' : 'var(--muted)' }}>
+                  {m.label}
+                </span>
+              </button>
             )
           })}
         </div>
       </div>
 
-      {/* This month's category breakdown */}
+      {/* Selected month's category breakdown */}
       <div className="card">
-        <p className="section-label">{MONTH_NAMES[now.getMonth()]} by category</p>
+        <p className="section-label">{selectedLabel} by category</p>
 
         {breakdown.length === 0 ? (
           <p style={{ color: 'var(--subtle)', fontSize: '0.85rem', margin: '0.5rem 0 0' }}>
-            No spending logged this month yet.
+            No spending logged in {selectedLabel}.
           </p>
         ) : (
           <>

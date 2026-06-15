@@ -53,6 +53,15 @@ service cloud.firestore {
       allow update, delete: if isUser(resource.data.uid);
     }
 
+    // recurringExpenses/{ruleId}: a user's monthly recurring-expense templates.
+    // The client materializes them into real expenses. Owner-scoped, mirroring
+    // the expenses create rule (must be a household member to create one).
+    match /recurringExpenses/{ruleId} {
+      allow read, update, delete: if isUser(resource.data.uid);
+      allow create: if isUser(request.resource.data.uid)
+        && isHouseholdMember(request.resource.data.householdId);
+    }
+
     // inviteCodes/{code}: readable by any authenticated user (needed to look up
     // a household by code during join). Writable by any authenticated user (the
     // creator writes it on household creation).

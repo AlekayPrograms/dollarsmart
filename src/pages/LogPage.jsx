@@ -6,6 +6,8 @@ import { useAuth } from '../contexts/AuthContext.jsx'
 import { useHousehold } from '../hooks/useHousehold.js'
 import { normalizeAmount, validateAmount, splitInHalf } from '../lib/expense.js'
 import { addExpense } from '../lib/expenseStore.js'
+import { addRecurring } from '../lib/recurringStore.js'
+import { monthKey } from '../lib/recurring.js'
 import AmountInput from '../components/AmountInput.jsx'
 import CategoryGrid from '../components/CategoryGrid.jsx'
 import TypeToggle from '../components/TypeToggle.jsx'
@@ -36,6 +38,8 @@ export default function LogPage() {
   const [note, setNote] = useState('')
   const [merchantName, setMerchantName] = useState(prefill.prefillMerchantName ?? '')
   const [dateStr, setDateStr] = useState(prefill.prefillDate ?? new Date().toISOString().slice(0, 10))
+  const [repeatMonthly, setRepeatMonthly] = useState(false)
+  const [repeatDay, setRepeatDay] = useState(() => Number(dateStr.slice(8, 10)) || new Date().getDate())
   const [saving, setSaving] = useState(false)
 
   const amount = normalizeAmount(amountText)
@@ -69,6 +73,23 @@ export default function LogPage() {
         merchantName,
         date: new Date(dateStr + 'T12:00:00'),
       })
+      // Set up a monthly repeat (expenses only). We just logged this month's, so
+      // stamp lastPostedMonth to the current month to avoid an immediate re-post.
+      if (repeatMonthly && type === 'expense') {
+        await addRecurring({
+          uid: user.uid,
+          householdId,
+          amount,
+          categoryId,
+          type: 'expense',
+          poolType,
+          note,
+          merchantName,
+          dayOfMonth: Math.min(Math.max(Number(repeatDay) || 1, 1), 31),
+          splitRatio: 0.5,
+          lastPostedMonth: monthKey(new Date()),
+        })
+      }
       if (prefill.pendingId) {
         await deleteDoc(doc(db, 'pendingTransactions', prefill.pendingId)).catch(() => {})
       }
@@ -145,6 +166,44 @@ export default function LogPage() {
               background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none',
             }}
           />
+
+          {type === 'expense' && (
+            <div style={{
+              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '0.75rem',
+            }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={repeatMonthly}
+                  onChange={(e) => setRepeatMonthly(e.target.checked)}
+                  style={{ width: 18, height: 18, accentColor: 'var(--accent)' }}
+                />
+                <span style={{ fontSize: '0.9rem', color: 'var(--text)' }}>Repeat every month</span>
+              </label>
+              {repeatMonthly && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.6rem' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>On day</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={repeatDay}
+                    onChange={(e) => setRepeatDay(e.target.value)}
+                    style={{
+                      width: 64, padding: '0.4rem 0.5rem', borderRadius: 8, textAlign: 'center',
+                      background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none',
+                    }}
+                  />
+                  <span style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>of each month</span>
+                </div>
+              )}
+              {repeatMonthly && (
+                <p style={{ margin: '0.5rem 0 0', fontSize: '0.72rem', color: 'var(--subtle)' }}>
+                  Days past 28 land on the last day in shorter months. Manage these in Settings.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
