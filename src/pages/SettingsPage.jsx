@@ -8,7 +8,9 @@ import { deleteRecurring, setRecurringActive } from '../lib/recurringStore.js'
 import { CATEGORIES, getCategory } from '../lib/categories.js'
 import { expensesToCsv } from '../lib/csv.js'
 import ConnectBankButton from '../components/ConnectBankButton.jsx'
+import BankAccounts from '../components/BankAccounts.jsx'
 import HouseholdInvite from '../components/HouseholdInvite.jsx'
+import HouseholdMembers from '../components/HouseholdMembers.jsx'
 import InstallAppButton from '../components/InstallAppButton.jsx'
 import NotificationSettings from '../components/NotificationSettings.jsx'
 import { leaveHousehold } from '../lib/householdStore.js'
@@ -126,6 +128,8 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {householdId && <HouseholdMembers />}
+
       {/* Monthly targets — personal */}
       <Section label="Monthly targets — personal">
         <TargetList targets={personalTargets} onSet={setPersonalTarget} />
@@ -190,8 +194,11 @@ export default function SettingsPage() {
 
       {/* Bank */}
       <Section label="Bank connection">
-        <LastRow>
+        <Row>
           <ConnectBankButton />
+        </Row>
+        <LastRow>
+          <BankAccounts />
         </LastRow>
       </Section>
 

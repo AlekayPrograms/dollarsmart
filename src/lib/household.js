@@ -30,6 +30,7 @@ export async function createHousehold(uid) {
 
   await setDoc(householdRef, {
     memberUids: [uid],
+    createdBy: uid, // the creator is the household "leader"
     inviteCode: code,
     inviteExpiresAt: expiresAt,
     inviteUsed: false,

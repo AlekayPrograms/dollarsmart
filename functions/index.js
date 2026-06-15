@@ -8,5 +8,10 @@ const { expenseTrigger } = require('./src/handlers/expenseTrigger')
 const { expenseRemovalVotes } = require('./src/handlers/expenseRemovalVotes')
 const { scheduledNudge } = require('./src/handlers/scheduledNudge')
 const { weeklyInsight } = require('./src/handlers/weeklyInsight')
+const { getAccounts, disconnectBank } = require('./src/handlers/plaidAccount')
+const { kickMember } = require('./src/handlers/kickMember')
 
-module.exports = { createLinkToken, exchangePublicToken, plaidWebhook, expenseTrigger, expenseRemovalVotes, scheduledNudge, weeklyInsight }
+module.exports = {
+  createLinkToken, exchangePublicToken, plaidWebhook, expenseTrigger, expenseRemovalVotes,
+  scheduledNudge, weeklyInsight, getAccounts, disconnectBank, kickMember,
+}
