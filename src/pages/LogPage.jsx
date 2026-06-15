@@ -105,7 +105,7 @@ export default function LogPage() {
   return (
     <div className="page-center" style={{ justifyContent: 'flex-start', paddingTop: '1rem', gap: '0.75rem' }}>
       {merchantName && (
-        <div style={{ width: '100%', maxWidth: 360, textAlign: 'center' }}>
+        <div style={{ width: '100%', maxWidth: 360, textAlign: 'left' }}>
           <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--subtle)' }}>
             From <span style={{ color: 'var(--muted)', fontWeight: 600 }}>{merchantName}</span>
           </p>

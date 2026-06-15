@@ -19,12 +19,14 @@ const voteBtn = {
 
 export default function ExpenseCard({
   expense, onDelete, onUpdateMerchant, onEdit,
-  onVoteRemove, onCancelVote, currentUid, memberUids = [], byPartner = false,
+  onVoteRemove, onCancelVote, currentUid, memberUids = [],
+  selectMode = false, selected = false, onToggleSelect, byPartner = false,
 }) {
   const cat = getCategory(expense.categoryId)
   const isIncome = expense.type === 'income'
   const badge = isIncome ? { label: 'Income', color: 'rgba(16,185,129,0.15)' } : (POOL_BADGE[expense.poolType] ?? POOL_BADGE.personal)
-  const canEdit = !!onUpdateMerchant && !isIncome
+  const selectable = selectMode && !!onToggleSelect
+  const canEdit = !!onUpdateMerchant && !isIncome && !selectMode
 
   const isShared = !isIncome && (expense.poolType === 'shared' || expense.poolType === 'split')
   const votes = expense.removalVotes || {}
@@ -50,12 +52,30 @@ export default function ExpenseCard({
   const merchant = expense.merchantName
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '0.75rem',
-      background: 'var(--surface)', borderRadius: 14,
-      padding: '0.75rem 0.875rem', width: '100%',
-      border: '1px solid var(--border)',
-    }}>
+    <div
+      onClick={selectable ? () => onToggleSelect(expense) : undefined}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '0.75rem',
+        background: 'var(--surface)', borderRadius: 14,
+        padding: '0.75rem 0.875rem', width: '100%',
+        border: selected ? '1px solid var(--accent)' : '1px solid var(--border)',
+        cursor: selectable ? 'pointer' : 'default',
+        opacity: selectMode && !selectable ? 0.45 : 1,
+        transition: 'border-color 0.15s, opacity 0.15s',
+      }}
+    >
+      {selectMode && (
+        <div style={{
+          width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+          border: `2px solid ${selected ? 'var(--accent)' : 'var(--subtle)'}`,
+          background: selected ? 'var(--accent)' : 'transparent',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#fff', fontSize: '0.7rem', lineHeight: 1,
+        }}>
+          {selected ? '✓' : ''}
+        </div>
+      )}
+
       <div style={{
         width: 42, height: 42, borderRadius: 11,
         background: cat.color + '22',
@@ -140,6 +160,7 @@ export default function ExpenseCard({
         }}>
           {isIncome ? '+' : '−'}${expense.amount.toFixed(2)}
         </span>
+        {!selectMode && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {onEdit && (
             <button
@@ -178,6 +199,7 @@ export default function ExpenseCard({
             </button>
           ) : null}
         </div>
+        )}
       </div>
     </div>
   )

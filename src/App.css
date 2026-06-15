@@ -59,6 +59,20 @@ input, textarea, select { font-size: 1rem; }
   overflow-x: hidden;
 }
 
+/* ─── Motion ────────────────────────────────────────────────── */
+
+@keyframes pageFade {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Each route mounts a fresh page container, so this animates screen changes. */
+.page-root, .page-center { animation: pageFade 0.24s cubic-bezier(0.4, 0, 0.2, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .page-root, .page-center { animation: none; }
+}
+
 /* ─── Cards / sections ──────────────────────────────────────── */
 
 .card {
@@ -96,6 +110,7 @@ input, textarea, select { font-size: 1rem; }
   white-space: nowrap;
 }
 .btn:active { transform: scale(0.97); }
+.btn:hover:not(:disabled) { filter: brightness(1.08); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-secondary {

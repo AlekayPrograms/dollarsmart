@@ -29,6 +29,14 @@ function windowKeys(anchorKey, n = 6) {
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
+// Show a category's share as a whole percent, but when it's so small it would
+// round to 0%, show the exact value to 4 decimals instead.
+function fmtPct(pct) {
+  const p = pct * 100
+  if (p > 0 && Math.round(p) === 0) return `${p.toFixed(4)}%`
+  return `${Math.round(p)}%`
+}
+
 export default function InsightsPage() {
   const { expenses, loading } = useExpenses()
 
@@ -208,7 +216,7 @@ export default function InsightsPage() {
                     <div key={b.categoryId} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.72rem' }}>
                       <span style={{ width: 8, height: 8, borderRadius: 2, background: cat.color, flexShrink: 0 }} />
                       <span style={{ color: 'var(--muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.label}</span>
-                      <span style={{ color: 'var(--subtle)', fontVariantNumeric: 'tabular-nums' }}>{Math.round(b.pct * 100)}%</span>
+                      <span style={{ color: 'var(--subtle)', fontVariantNumeric: 'tabular-nums' }}>{fmtPct(b.pct)}</span>
                     </div>
                   )
                 })}

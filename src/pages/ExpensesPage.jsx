@@ -26,6 +26,8 @@ export default function ExpensesPage() {
   const [filters, setFilters] = useState({ pool: 'all', category: 'all', period: { mode: 'all', value: '' } })
   const [pendingDelete, setPendingDelete] = useState(null)
   const [editing, setEditing] = useState(null)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selected, setSelected] = useState(() => new Set())
 
   const merged = useMemo(() => {
     const map = new Map()
@@ -76,10 +78,35 @@ export default function ExpensesPage() {
     await updateExpense(id, updates)
   }, [])
 
+  const toggleSelect = useCallback((expense) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(expense.id)) next.delete(expense.id)
+      else next.add(expense.id)
+      return next
+    })
+  }, [])
+
+  const exitSelect = useCallback(() => { setSelectMode(false); setSelected(new Set()) }, [])
+
+  const deleteSelected = useCallback(async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    if (!window.confirm(`Delete ${ids.length} expense${ids.length > 1 ? 's' : ''}? This can't be undone.`)) return
+    for (const id of ids) await deleteExpense({ id })
+    exitSelect()
+  }, [selected, exitSelect])
+
   return (
     <div className="page-center" style={{ justifyContent: 'flex-start', gap: '0.875rem' }}>
-      <div style={{ width: '100%', maxWidth: 440 }}>
+      <div style={{ width: '100%', maxWidth: 440, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ margin: 0, fontSize: '1.375rem', fontWeight: 700, letterSpacing: '-0.02em' }}>Expenses</h2>
+        <button
+          onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
+          style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, padding: 0 }}
+        >
+          {selectMode ? 'Cancel' : 'Select'}
+        </button>
       </div>
 
       <FilterBar filters={filters} onChange={setFilters} years={years} />
@@ -97,6 +124,9 @@ export default function ExpensesPage() {
             byPartner={e.uid !== user?.uid}
             currentUid={user?.uid}
             memberUids={memberUids}
+            selectMode={selectMode}
+            selected={selected.has(e.id)}
+            onToggleSelect={e.uid === user?.uid && e.poolType !== 'shared' && e.poolType !== 'split' ? toggleSelect : undefined}
             onDelete={e.uid === user?.uid && e.poolType !== 'shared' && e.poolType !== 'split' ? handleDelete : undefined}
             onVoteRemove={e.poolType === 'shared' || e.poolType === 'split' ? handleVoteRemove : undefined}
             onCancelVote={e.poolType === 'shared' || e.poolType === 'split' ? handleCancelVote : undefined}
@@ -112,6 +142,23 @@ export default function ExpensesPage() {
           onSave={handleSaveEdit}
           onClose={() => setEditing(null)}
         />
+      )}
+
+      {selectMode && (
+        <div style={{
+          position: 'fixed', left: 0, right: 0,
+          bottom: 'calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 12px)',
+          display: 'flex', justifyContent: 'center', zIndex: 90, padding: '0 1rem',
+        }}>
+          <button
+            className="btn"
+            onClick={deleteSelected}
+            disabled={selected.size === 0}
+            style={{ background: 'var(--danger)', color: '#fff', boxShadow: '0 4px 14px rgba(0,0,0,0.4)' }}
+          >
+            {selected.size === 0 ? 'Select expenses to delete' : `Delete ${selected.size} selected`}
+          </button>
+        </div>
       )}
 
       {pendingDelete && (
