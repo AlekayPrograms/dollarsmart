@@ -11,21 +11,65 @@ function monthKeyOf(date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
+// Add `delta` months to a 'YYYY-MM' key.
+function shiftKey(key, delta) {
+  const [y, m] = key.split('-').map(Number)
+  const d = new Date(y, m - 1 + delta, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+const keyToDate = (key) => { const [y, m] = key.split('-').map(Number); return new Date(y, m - 1, 1) }
+
+// The N month keys ending at (and including) `anchorKey`, oldest first.
+function windowKeys(anchorKey, n = 6) {
+  const keys = []
+  for (let i = n - 1; i >= 0; i--) keys.push(shiftKey(anchorKey, -i))
+  return keys
+}
+
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
 export default function InsightsPage() {
   const { expenses, loading } = useExpenses()
 
-  const months = useMemo(() => monthlyTotals(expenses, 6), [expenses])
-  const maxMonth = Math.max(1, ...months.map((m) => m.total))
-
   const now = new Date()
   const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  const [selectedKey, setSelectedKey] = useState(currentKey)
 
-  // Label the breakdown for the selected month (add the year if it isn't this one).
+  // `anchorKey` is the newest (right-edge) month of the 6-bar window; `selectedKey`
+  // is the highlighted bar whose breakdown shows below. They start at this month.
+  const [anchorKey, setAnchorKey] = useState(currentKey)
+  const [selectedKey, setSelectedKey] = useState(currentKey)
+  const [picking, setPicking] = useState(false)
+
+  const months = useMemo(
+    () => monthlyTotals(expenses, 6, keyToDate(anchorKey)),
+    [expenses, anchorKey],
+  )
+  const maxMonth = Math.max(1, ...months.map((m) => m.total))
+
   const [selYear, selMonth] = selectedKey.split('-').map(Number)
-  const selectedLabel = MONTH_NAMES[selMonth - 1] + (selYear !== now.getFullYear() ? ` ${selYear}` : '')
+  const navLabel = `${MONTH_NAMES[selMonth - 1]} ${selYear}`
+  const breakdownLabel = MONTH_NAMES[selMonth - 1] + (selYear !== now.getFullYear() ? ` ${selYear}` : '')
+
+  const canGoForward = anchorKey < currentKey
+
+  // Move the window one month, keeping the selection in view (snap it to the
+  // new right edge when it falls outside the shifted window).
+  function step(delta) {
+    let a = shiftKey(anchorKey, delta)
+    if (a > currentKey) a = currentKey
+    setAnchorKey(a)
+    if (!windowKeys(a).includes(selectedKey)) setSelectedKey(a)
+  }
+
+  // Jump anywhere via the native month picker (can't go past the current month).
+  function jumpTo(key) {
+    setPicking(false)
+    if (!key) return
+    const k = key > currentKey ? currentKey : key
+    setAnchorKey(k)
+    setSelectedKey(k)
+  }
 
   const selectedExpenses = useMemo(
     () => expenses.filter((e) => monthKeyOf(e.date) === selectedKey),
@@ -46,6 +90,12 @@ export default function InsightsPage() {
     return stops.length ? `conic-gradient(${stops.join(', ')})` : 'var(--surface-2)'
   }, [breakdown])
 
+  const navBtn = {
+    width: 34, height: 34, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)',
+    fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1,
+  }
+
   return (
     <div className="page-center" style={{ justifyContent: 'flex-start', gap: '1.25rem' }}>
       <div style={{ width: '100%', maxWidth: 440 }}>
@@ -57,10 +107,43 @@ export default function InsightsPage() {
 
       {loading && <p style={{ color: 'var(--subtle)', fontSize: '0.875rem' }}>Loading…</p>}
 
-      {/* Monthly spending bar chart — tap a month to see its breakdown below */}
+      {/* Monthly spending bar chart with month navigator */}
       <div className="card">
-        <p className="section-label">Spending — last 6 months</p>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', height: 140, paddingTop: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+          <button onClick={() => step(-1)} style={navBtn} aria-label="Previous month">‹</button>
+
+          {picking ? (
+            <input
+              type="month"
+              autoFocus
+              defaultValue={selectedKey}
+              max={currentKey}
+              onChange={(e) => jumpTo(e.target.value)}
+              onBlur={() => setPicking(false)}
+              style={{
+                background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)',
+                borderRadius: 10, padding: '0.4rem 0.6rem', fontSize: '0.95rem', colorScheme: 'dark', outline: 'none',
+              }}
+            />
+          ) : (
+            <button
+              onClick={() => setPicking(true)}
+              style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+            >
+              {navLabel}
+              <span style={{ fontSize: '0.7rem', color: 'var(--subtle)' }}>▾</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => canGoForward && step(1)}
+            disabled={!canGoForward}
+            style={{ ...navBtn, opacity: canGoForward ? 1 : 0.35, cursor: canGoForward ? 'pointer' : 'default' }}
+            aria-label="Next month"
+          >›</button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', height: 140 }}>
           {months.map((m) => {
             const h = Math.round((m.total / maxMonth) * 100)
             const isSelected = m.key === selectedKey
@@ -97,11 +180,11 @@ export default function InsightsPage() {
 
       {/* Selected month's category breakdown */}
       <div className="card">
-        <p className="section-label">{selectedLabel} by category</p>
+        <p className="section-label">{breakdownLabel} by category</p>
 
         {breakdown.length === 0 ? (
           <p style={{ color: 'var(--subtle)', fontSize: '0.85rem', margin: '0.5rem 0 0' }}>
-            No spending logged in {selectedLabel}.
+            No spending logged in {breakdownLabel}.
           </p>
         ) : (
           <>
