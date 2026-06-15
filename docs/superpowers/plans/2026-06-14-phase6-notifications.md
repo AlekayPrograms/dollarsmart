@@ -166,7 +166,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js')
 
 firebase.initializeApp({
-  apiKey: 'AIzaSyDiefFNJ_uMmc7M5VuW0AwWAfvziESLV3Y',
+  apiKey: 'YOUR_FIREBASE_WEB_API_KEY', // public client identifier — pull from VITE_FIREBASE_API_KEY
   authDomain: 'dollarsmart-couple.firebaseapp.com',
   projectId: 'dollarsmart-couple',
   storageBucket: 'dollarsmart-couple.firebasestorage.app',
