@@ -28,6 +28,7 @@ onBackgroundMessage(messaging, (payload) => {
   const params = new URLSearchParams()
   if (data.amount) params.set('amount', data.amount)
   if (data.categoryId) params.set('categoryId', data.categoryId)
+  if (data.entryType) params.set('entryType', data.entryType)
   if (data.pendingId) params.set('pendingId', data.pendingId)
   if (data.date) params.set('date', data.date)
   if (data.merchantName) params.set('merchantName', data.merchantName)

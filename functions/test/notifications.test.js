@@ -1,4 +1,4 @@
-const { buildTransactionMessage, makeSendTransactionAlert } = require('../src/notifications')
+const { buildTransactionMessage, buildIncomeMessage, makeSendTransactionAlert } = require('../src/notifications')
 
 describe('buildTransactionMessage', () => {
   it('builds an FCM message with body, deep-link data, and token', () => {
@@ -12,7 +12,20 @@ describe('buildTransactionMessage', () => {
     expect(msg.token).toBe('tok-1')
     expect(msg.notification.title).toBe('DollarSmart')
     expect(msg.notification.body).toBe('Looks like you spent $24.50 at Chipotle — log it?')
-    expect(msg.data).toEqual({ amount: '24.5', categoryId: 'food', pendingId: 'tx-1', merchantName: 'Chipotle' })
+    expect(msg.data).toEqual({ amount: '24.5', categoryId: 'food', entryType: 'expense', pendingId: 'tx-1', merchantName: 'Chipotle' })
+  })
+})
+
+describe('buildIncomeMessage', () => {
+  it('builds an income prompt that deep-links as income', () => {
+    const msg = buildIncomeMessage({ token: 'tok-1', amount: 1500, merchantName: 'ACME PAYROLL', pendingId: 'tx-7' })
+    expect(msg.notification.body).toBe('Received $1500.00 from ACME PAYROLL — log as income?')
+    expect(msg.data).toEqual({ amount: '1500', categoryId: 'other', entryType: 'income', pendingId: 'tx-7', merchantName: 'ACME PAYROLL' })
+  })
+
+  it('omits the sender clause when none is known', () => {
+    const msg = buildIncomeMessage({ token: 'tok-1', amount: 50, pendingId: 'tx-8' })
+    expect(msg.notification.body).toBe('Received $50.00 — log as income?')
   })
 })
 
@@ -60,5 +73,15 @@ describe('makeSendTransactionAlert', () => {
     const send = makeSendTransactionAlert({ db, messaging: { send: async (m) => { sent.push(m) } } })
     await send('u1', { amount: 5, merchantName: 'Uber', categoryId: 'transport' }, 'tx-9')
     expect(sent).toHaveLength(1)
+  })
+
+  it('sends an income-styled alert for income entries', async () => {
+    const sent = []
+    const db = fakeDb({ 'users/u1': { fcmToken: 'tok-1', notificationPrefs: { transactionAlert: true } } })
+    const send = makeSendTransactionAlert({ db, messaging: { send: async (m) => { sent.push(m) } } })
+    await send('u1', { amount: 1500, merchantName: 'ACME PAYROLL', entryType: 'income' }, 'tx-7')
+    expect(sent).toHaveLength(1)
+    expect(sent[0].notification.body).toBe('Received $1500.00 from ACME PAYROLL — log as income?')
+    expect(sent[0].data.entryType).toBe('income')
   })
 })

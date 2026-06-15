@@ -45,24 +45,35 @@ function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory, s
       // so we consider both. Keyed by transaction_id, this is idempotent.
       for (const tx of [...added, ...modified]) {
         if (tx.pending) continue          // wait for it to post
-        if (!(tx.amount > 0)) continue     // outflow (spending) only
+        const primary = tx.personal_finance_category && tx.personal_finance_category.primary
+        // Plaid uses positive amounts for outflow (spending) and negative for
+        // inflow (deposits, refunds, transfers). Prompt to log spending as an
+        // expense, and genuine deposits (paychecks, transfers in) as income.
+        // Skip everything else (refunds, transfers out) to avoid noise.
+        let entryType
+        if (tx.amount > 0) entryType = 'expense'
+        else if (tx.amount < 0 && (primary === 'INCOME' || primary === 'TRANSFER_IN')) entryType = 'income'
+        else continue
+
         const ref = db.doc(`pendingTransactions/${tx.transaction_id}`)
         const existing = await ref.get()
         if (existing.exists) continue      // already queued — don't double-prompt
-        const categoryId = merchantToCategory(
-          tx.merchant_name || tx.name,
-          tx.personal_finance_category && tx.personal_finance_category.primary,
-        )
+
+        const amount = Math.abs(tx.amount)
+        const categoryId = entryType === 'income'
+          ? 'other'
+          : merchantToCategory(tx.merchant_name || tx.name, primary)
         await ref.set({
           uid: item.uid,
-          amount: tx.amount,
+          amount,
           merchantName: tx.merchant_name || tx.name || 'Unknown',
           categoryId,
+          entryType,
           date: tx.date,
           status: 'pending',
           createdAt: new Date().toISOString(),
         })
-        await sendAlert(item.uid, { ...tx, categoryId }, tx.transaction_id)
+        await sendAlert(item.uid, { ...tx, amount, categoryId, entryType }, tx.transaction_id)
       }
 
       // When a pending row is removed (e.g. replaced by its posted version),

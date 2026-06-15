@@ -8,6 +8,26 @@ function buildTransactionMessage({ token, amount, merchantName = '', categoryId,
     data: {
       amount: String(amount),
       categoryId: String(categoryId),
+      entryType: 'expense',
+      pendingId: String(pendingId),
+      ...(date ? { date: String(date) } : {}),
+      ...(merchantName ? { merchantName: String(merchantName) } : {}),
+    },
+  }
+}
+
+function buildIncomeMessage({ token, amount, merchantName = '', pendingId, date }) {
+  const from = merchantName ? ` from ${merchantName}` : ''
+  return {
+    token,
+    notification: {
+      title: 'DollarSmart',
+      body: `Received $${Number(amount).toFixed(2)}${from} — log as income?`,
+    },
+    data: {
+      amount: String(amount),
+      categoryId: 'other',
+      entryType: 'income',
       pendingId: String(pendingId),
       ...(date ? { date: String(date) } : {}),
       ...(merchantName ? { merchantName: String(merchantName) } : {}),
@@ -24,14 +44,10 @@ function makeSendTransactionAlert({ db, messaging }) {
     if (!token || !wantsAlert) return
     try {
       const merchantName = tx.merchant_name || tx.merchantName || tx.name || ''
-      await messaging.send(buildTransactionMessage({
-        token,
-        amount: tx.amount,
-        merchantName,
-        categoryId: tx.categoryId,
-        pendingId,
-        date: tx.date,
-      }))
+      const msg = tx.entryType === 'income'
+        ? buildIncomeMessage({ token, amount: tx.amount, merchantName, pendingId, date: tx.date })
+        : buildTransactionMessage({ token, amount: tx.amount, merchantName, categoryId: tx.categoryId, pendingId, date: tx.date })
+      await messaging.send(msg)
     } catch (err) {
       console.error('FCM send failed:', err.message || err)
     }
@@ -92,6 +108,7 @@ function buildWeeklyInsightMessage({ token, insight }) {
 
 module.exports = {
   buildTransactionMessage,
+  buildIncomeMessage,
   makeSendTransactionAlert,
   buildPartnerActivityMessage,
   buildApproachingTargetMessage,

@@ -28,11 +28,12 @@ export default function LogPage() {
     pendingId: location.state?.pendingId ?? params.get('pendingId') ?? undefined,
     prefillDate: location.state?.prefillDate ?? params.get('date') ?? undefined,
     prefillMerchantName: location.state?.prefillMerchantName ?? params.get('merchantName') ?? undefined,
+    prefillType: location.state?.prefillType ?? params.get('entryType') ?? undefined,
   }
 
   const [amountText, setAmountText] = useState(prefill.prefillAmount != null ? String(prefill.prefillAmount) : '')
   const [categoryId, setCategoryId] = useState(prefill.prefillCategoryId ?? null)
-  const [type, setType] = useState('expense')
+  const [type, setType] = useState(prefill.prefillType === 'income' ? 'income' : 'expense')
   const [poolType, setPoolType] = useState(prefill.prefillSplit ? 'split' : 'personal')
   const [showDetails, setShowDetails] = useState(false)
   const [note, setNote] = useState('')

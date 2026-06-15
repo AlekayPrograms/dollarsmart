@@ -74,6 +74,38 @@ describe('makeProcessTransactionsSync', () => {
     expect(alerts).toEqual([{ uid: 'u1', pendingId: 'tx-9', categoryId: 'food' }])
   })
 
+  it('enqueues a posted inflow categorized as INCOME as an income entry', async () => {
+    const db = fakeDb({ 'plaidItems/u1': { itemId: 'item-1', accessToken: 'acc', cursor: null } })
+    const { process, alerts } = makeSync(db, {
+      added: [
+        { transaction_id: 'tx-inc', amount: -1500, merchant_name: 'ACME PAYROLL', date: '2026-06-15', pending: false,
+          personal_finance_category: { primary: 'INCOME' } },
+      ],
+    })
+
+    await process('item-1')
+
+    expect(db.writes['pendingTransactions/tx-inc'].data).toMatchObject({
+      uid: 'u1', amount: 1500, merchantName: 'ACME PAYROLL', entryType: 'income', categoryId: 'other',
+    })
+    expect(alerts).toEqual([{ uid: 'u1', pendingId: 'tx-inc', categoryId: 'other' }])
+  })
+
+  it('skips inflows that are not income (e.g. refunds / transfers out)', async () => {
+    const db = fakeDb({ 'plaidItems/u1': { itemId: 'item-1', accessToken: 'acc', cursor: null } })
+    const { process, alerts } = makeSync(db, {
+      added: [
+        { transaction_id: 'tx-ref', amount: -12, merchant_name: 'Amazon refund', date: '2026-06-15', pending: false,
+          personal_finance_category: { primary: 'GENERAL_MERCHANDISE' } },
+      ],
+    })
+
+    await process('item-1')
+
+    expect(db.writes['pendingTransactions/tx-ref']).toBeUndefined()
+    expect(alerts).toHaveLength(0)
+  })
+
   it('removes a queued entry when its transaction is removed', async () => {
     const db = fakeDb({ 'plaidItems/u1': { itemId: 'item-1', accessToken: 'acc', cursor: null } })
     db.writes['pendingTransactions/tx-old'] = { data: { uid: 'u1' } }
