@@ -85,7 +85,7 @@ export default function EditExpenseModal({ expense, onSave, onClose }) {
 
         {!isIncome && (
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-            {['personal', 'shared', 'split'].map((p) => (
+            {['personal', 'split'].map((p) => (
               <button
                 key={p}
                 onClick={() => setPoolType(p)}

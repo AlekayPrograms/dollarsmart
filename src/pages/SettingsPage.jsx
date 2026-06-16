@@ -85,7 +85,7 @@ function TargetList({ targets, onSet }) {
 export default function SettingsPage() {
   const { user, signOutUser } = useAuth()
   const { expenses } = useExpenses()
-  const { personalTargets, setPersonalTarget, sharedTargets, setSharedTarget } = useMonthlyTargets()
+  const { personalTargets, setPersonalTarget } = useMonthlyTargets()
   const { householdId } = useHousehold()
   const { recurring } = useRecurring()
   const [leavingHousehold, setLeavingHousehold] = useState(false)
@@ -130,23 +130,10 @@ export default function SettingsPage() {
 
       {householdId && <HouseholdMembers />}
 
-      {/* Monthly targets — personal */}
-      <Section label="Monthly targets — personal">
+      {/* Monthly targets */}
+      <Section label="Monthly targets">
         <TargetList targets={personalTargets} onSet={setPersonalTarget} />
       </Section>
-
-      {/* Monthly targets — shared (only relevant in a household) */}
-      {householdId && (
-        <div style={{ width: '100%', maxWidth: 440 }}>
-          <p className="section-label">Monthly targets — shared</p>
-          <p style={{ margin: '-0.25rem 0 0.5rem', fontSize: '0.75rem', color: 'var(--subtle)' }}>
-            Spending limits for your shared pool, visible to everyone in the household.
-          </p>
-          <div className="card" style={{ padding: '0.25rem 0', overflow: 'hidden' }}>
-            <TargetList targets={sharedTargets} onSet={setSharedTarget} />
-          </div>
-        </div>
-      )}
 
       {/* Recurring expenses */}
       {recurring.length > 0 && (

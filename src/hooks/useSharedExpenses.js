@@ -4,9 +4,9 @@ import { db } from '../firebase/client.js'
 import { useHousehold } from './useHousehold.js'
 
 /**
- * Streams the whole household's shared + split expenses (logged by either
- * partner), most recent first. Personal expenses are never included here —
- * those stay private to their owner via useExpenses.
+ * Streams the whole household's SPLIT expenses (logged by either partner), most
+ * recent first. Split is the only shared mechanism; personal expenses stay
+ * private to their owner via useExpenses.
  */
 export function useSharedExpenses() {
   const { householdId } = useHousehold()
@@ -18,7 +18,7 @@ export function useSharedExpenses() {
     const q = query(
       collection(db, 'expenses'),
       where('householdId', '==', householdId),
-      where('poolType', 'in', ['shared', 'split']),
+      where('poolType', '==', 'split'),
       orderBy('date', 'desc'),
     )
     const unsub = onSnapshot(

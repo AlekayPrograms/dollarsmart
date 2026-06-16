@@ -106,7 +106,7 @@ export default function InsightsPage() {
       <div style={{ width: '100%', maxWidth: 440 }}>
         <h2 style={{ margin: 0, fontSize: '1.375rem', fontWeight: 700, letterSpacing: '-0.02em' }}>Insights</h2>
         <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: 'var(--subtle)' }}>
-          Your spending only — shared totals live on Home.
+          Your own spending (your half of any split).
         </p>
       </div>
 

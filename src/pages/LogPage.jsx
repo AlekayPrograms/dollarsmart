@@ -48,6 +48,12 @@ export default function LogPage() {
   const canSave = validateAmount(amount) && (type === 'income' || categoryId) && !saving
 
   function handleSplit() {
+    if (poolType === 'split') {
+      // Toggle off: restore the full amount and make it personal again.
+      setAmountText(String(amount * 2))
+      setPoolType('personal')
+      return
+    }
     if (!validateAmount(amount)) return
     setAmountText(String(splitInHalf(amount)))
     setPoolType('split')
@@ -119,16 +125,6 @@ export default function LogPage() {
       {type === 'expense' && (
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <SplitButton onSplit={handleSplit} active={poolType === 'split'} />
-          <button
-            onClick={() => setPoolType(poolType === 'shared' ? 'personal' : 'shared')}
-            style={{
-              padding: '0.5rem 1rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600,
-              background: poolType === 'shared' ? '#10B981' : 'var(--surface)',
-              border: '1px solid var(--border)', color: 'var(--text)',
-            }}
-          >
-            {poolType === 'shared' ? 'Shared ✓' : 'Personal'}
-          </button>
         </div>
       )}
 

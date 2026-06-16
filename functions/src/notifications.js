@@ -76,17 +76,6 @@ function buildPartnerActivityMessage({ token, amount, categoryId, poolType }) {
   }
 }
 
-function buildApproachingTargetMessage({ token, percent }) {
-  return {
-    token,
-    data: {
-      title: 'DollarSmart',
-      body: `Heads up — you've used ${percent}% of your shared budget this month`,
-      path: '/',
-    },
-  }
-}
-
 function buildDailyNudgeMessage({ token }) {
   return {
     token,
@@ -114,7 +103,7 @@ function buildRemovalVoteMessage({ token }) {
     token,
     data: {
       title: 'DollarSmart',
-      body: 'Your partner wants to remove a shared expense — open the app to confirm',
+      body: 'Your partner wants to remove a split expense — open the app to confirm',
       path: '/expenses',
     },
   }
@@ -125,7 +114,7 @@ function buildRemovalCompleteMessage({ token }) {
     token,
     data: {
       title: 'DollarSmart',
-      body: 'A shared expense was removed (you both agreed)',
+      body: 'A split expense was removed (you both agreed)',
       path: '/expenses',
     },
   }
@@ -136,7 +125,6 @@ module.exports = {
   buildIncomeMessage,
   makeSendTransactionAlert,
   buildPartnerActivityMessage,
-  buildApproachingTargetMessage,
   buildDailyNudgeMessage,
   buildWeeklyInsightMessage,
   buildRemovalVoteMessage,

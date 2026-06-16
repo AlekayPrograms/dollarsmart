@@ -1,9 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useExpenses } from '../hooks/useExpenses.js'
-import { useSharedExpenses } from '../hooks/useSharedExpenses.js'
-import { useHousehold } from '../hooks/useHousehold.js'
 import { useMonthlyTargets } from '../hooks/useMonthlyTargets.js'
-import { sumByPool, sumByCategory, budgetProgress } from '../lib/budget.js'
+import { sumByCategory, budgetProgress } from '../lib/budget.js'
 import { CATEGORIES } from '../lib/categories.js'
 import ProgressBar from '../components/ProgressBar.jsx'
 import PendingTransactionBanner from '../components/PendingTransactionBanner.jsx'
@@ -20,9 +18,7 @@ const MONTH_NAMES = ['January','February','March','April','May','June','July','A
 
 export default function HomePage() {
   const { expenses } = useExpenses()
-  const { expenses: shared } = useSharedExpenses()
-  const { household } = useHousehold()
-  const { personalTargets, sharedTargets } = useMonthlyTargets()
+  const { personalTargets } = useMonthlyTargets()
 
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
@@ -30,13 +26,6 @@ export default function HomePage() {
 
   const myThisMonth = expenses.filter((e) => toMs(e.date) >= monthStart)
   const spentByCategory = sumByCategory(myThisMonth)
-
-  // Shared pool = both shared and split expenses for the current month, matching
-  // the backend's approaching-target alert in functions/src/handlers/expenseTrigger.js
-  const sharedThisMonth = shared.filter((e) => toMs(e.date) >= monthStart)
-  const sharedPools = sumByPool(sharedThisMonth)
-  const sharedSpent = (sharedPools.shared ?? 0) + (sharedPools.split ?? 0)
-  const sharedTarget = Object.values(household?.sharedTargets ?? {}).reduce((a, b) => a + (Number(b) || 0), 0)
 
   const budgetRows = CATEGORIES.filter((c) =>
     (spentByCategory[c.id] ?? 0) > 0 || (personalTargets[c.id] ?? 0) > 0
@@ -60,24 +49,6 @@ export default function HomePage() {
       <ReconnectBanner />
 
       <BankBalanceCard />
-
-      {sharedTarget > 0 && (
-        <div className="card">
-          <p className="section-label">Shared Pool</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
-              ${sharedSpent.toFixed(0)}
-            </span>
-            <span style={{ fontSize: '0.85rem', color: 'var(--subtle)', fontVariantNumeric: 'tabular-nums' }}>
-              of ${sharedTarget.toFixed(0)}
-            </span>
-          </div>
-          <ProgressBar spent={sharedSpent} target={sharedTarget} />
-          <p style={{ margin: '0.5rem 0 0', fontSize: '0.78rem', color: 'var(--subtle)' }}>
-            ${Math.max(0, sharedTarget - sharedSpent).toFixed(0)} remaining this month
-          </p>
-        </div>
-      )}
 
       {budgetRows.length > 0 && (
         <div className="card">
@@ -110,7 +81,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {sharedTarget === 0 && budgetRows.length === 0 && (
+      {budgetRows.length === 0 && (
         <div style={{ color: 'var(--subtle)', fontSize: '0.875rem', textAlign: 'center', paddingTop: '2rem' }}>
           <p style={{ margin: 0 }}>No expenses or targets yet.</p>
           <p style={{ margin: '0.25rem 0 0' }}>Tap <strong>+ Log</strong> to get started.</p>

@@ -16,7 +16,7 @@ const users = {
   u1: { fcmToken: 'tok1' },
   u2: { fcmToken: 'tok2' },
 }
-const sharedExpense = { uid: 'u1', householdId: 'h1', poolType: 'shared', type: 'expense', amount: 40 }
+const sharedExpense = { uid: 'u1', householdId: 'h1', poolType: 'split', type: 'expense', amount: 40 }
 
 describe('reversalDelta', () => {
   it('gives back a spent amount and takes back received income', () => {

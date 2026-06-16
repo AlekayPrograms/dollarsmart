@@ -42,19 +42,19 @@ service cloud.firestore {
 
     match /expenses/{expenseId} {
       // Owner can always read their own. Household members can also read
-      // shared/split expenses (so partners see combined shared spending);
-      // personal expenses stay private to their owner.
+      // SPLIT expenses (split is the only shared mechanism); personal
+      // expenses stay private to their owner.
       allow read: if isUser(resource.data.uid)
-        || (resource.data.poolType in ['shared', 'split']
+        || (resource.data.poolType == 'split'
             && isHouseholdMember(resource.data.householdId));
       allow create: if isUser(request.resource.data.uid)
         && isHouseholdMember(request.resource.data.householdId);
       // The owner may edit anything. A household member may ALSO update a
-      // shared/split expense, but only to cast/withdraw a removal vote
-      // (changing nothing but the removalVotes field). Both partners voting
-      // triggers a Cloud Function that performs the actual delete.
+      // SPLIT expense, but only to cast/withdraw a removal vote (changing
+      // nothing but the removalVotes field). Both partners voting triggers a
+      // Cloud Function that performs the actual delete.
       allow update: if isUser(resource.data.uid)
-        || (resource.data.poolType in ['shared', 'split']
+        || (resource.data.poolType == 'split'
             && isHouseholdMember(resource.data.householdId)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['removalVotes']));
       // Only the owner may delete directly (personal expenses); shared removals

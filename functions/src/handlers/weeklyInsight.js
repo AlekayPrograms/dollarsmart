@@ -11,7 +11,7 @@ const CATEGORY_LABELS = {
   health: 'Health', travel: 'Travel', pets: 'Pets', other: 'Other',
 }
 
-async function generateInsight({ expenses, sharedTotal, sharedTarget }) {
+async function generateInsight({ expenses, splitTotal }) {
   const byCategory = {}
   for (const e of expenses) {
     if (e.type === 'income') continue
@@ -24,16 +24,12 @@ async function generateInsight({ expenses, sharedTotal, sharedTarget }) {
     .map(([label, amt]) => `- ${label}: $${amt.toFixed(2)}`)
     .join('\n')
 
-  const budgetLine = sharedTarget > 0
-    ? `Shared pool: $${sharedTotal.toFixed(2)} / $${sharedTarget.toFixed(2)} budget this month`
-    : `Shared pool: $${sharedTotal.toFixed(2)} this month`
-
   const prompt = `You are a friendly personal finance assistant for a couple. Write a 1-2 sentence spending insight from this week's data. Be encouraging and specific with numbers. Keep the total response under 180 characters.
 
 This week:
 Total spent: $${totalSpent.toFixed(2)}
 ${categoryLines}
-${budgetLine}`
+Split (shared) spending this month: $${splitTotal.toFixed(2)}`
 
   const client = new Anthropic({ apiKey: process.env[ANTHROPIC_API_KEY] })
   const msg = await client.messages.create({
@@ -73,16 +69,14 @@ const weeklyInsight = onSchedule(
       const expenses = weekExpensesSnap.docs.map((d) => d.data())
       if (expenses.filter((e) => e.type === 'expense').length === 0) return
 
-      const sharedTotal = monthExpensesSnap.docs
+      const splitTotal = monthExpensesSnap.docs
         .map((d) => d.data())
-        .filter((e) => e.type === 'expense' && (e.poolType === 'shared' || e.poolType === 'split'))
+        .filter((e) => e.type === 'expense' && e.poolType === 'split')
         .reduce((sum, e) => sum + e.amount, 0)
-      const sharedTarget = Object.values(household.sharedTargets || {})
-        .reduce((sum, v) => sum + (Number(v) || 0), 0)
 
       let insight
       try {
-        insight = await generateInsight({ expenses, sharedTotal, sharedTarget })
+        insight = await generateInsight({ expenses, splitTotal })
       } catch (err) {
         console.error('Weekly insight generation failed:', err.message)
         return

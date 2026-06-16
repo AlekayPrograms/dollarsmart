@@ -126,10 +126,10 @@ export default function ExpensesPage() {
             memberUids={memberUids}
             selectMode={selectMode}
             selected={selected.has(e.id)}
-            onToggleSelect={e.uid === user?.uid && e.poolType !== 'shared' && e.poolType !== 'split' ? toggleSelect : undefined}
-            onDelete={e.uid === user?.uid && e.poolType !== 'shared' && e.poolType !== 'split' ? handleDelete : undefined}
-            onVoteRemove={e.poolType === 'shared' || e.poolType === 'split' ? handleVoteRemove : undefined}
-            onCancelVote={e.poolType === 'shared' || e.poolType === 'split' ? handleCancelVote : undefined}
+            onToggleSelect={e.uid === user?.uid && e.poolType !== 'split' ? toggleSelect : undefined}
+            onDelete={e.uid === user?.uid && e.poolType !== 'split' ? handleDelete : undefined}
+            onVoteRemove={e.poolType === 'split' ? handleVoteRemove : undefined}
+            onCancelVote={e.poolType === 'split' ? handleCancelVote : undefined}
             onUpdateMerchant={e.uid === user?.uid ? handleUpdateMerchant : undefined}
             onEdit={e.uid === user?.uid ? setEditing : undefined}
           />

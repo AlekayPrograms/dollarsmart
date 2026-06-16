@@ -5,8 +5,7 @@ import { enableNotifications, isMessagingSupported } from '../lib/messaging.js'
 
 const TOGGLES = [
   { key: 'transactionAlert', label: 'Transaction detected' },
-  { key: 'partnerActivity', label: 'Partner logged a shared expense' },
-  { key: 'approachingTarget', label: 'Approaching a shared target' },
+  { key: 'partnerActivity', label: 'Partner logged a split expense' },
   { key: 'weeklyInsight', label: 'Weekly spending insight (Monday)' },
   { key: 'dailyNudge', label: 'Daily logging reminder' },
 ]

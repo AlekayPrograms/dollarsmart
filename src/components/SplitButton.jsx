@@ -8,7 +8,7 @@ export default function SplitButton({ onSplit, active }) {
         border: '1px solid var(--border)', color: 'var(--text)',
         transition: 'background 0.15s',
       }}
-      title="Split this in half and route to the shared pool"
+      title="Split this in half with your partner"
     >
       ÷2 Split
     </button>

@@ -3,7 +3,6 @@ import { CATEGORIES } from '../lib/categories.js'
 const POOLS = [
   { id: 'all', label: 'All' },
   { id: 'personal', label: 'Personal' },
-  { id: 'shared', label: 'Shared' },
   { id: 'split', label: 'Split' },
 ]
 

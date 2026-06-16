@@ -42,7 +42,7 @@ function reversalDelta(expense) {
  */
 async function handleRemovalVotes({ db, messaging, expenseId, before, after }) {
   if (!after) return
-  if (after.poolType !== 'shared' && after.poolType !== 'split') return
+  if (after.poolType !== 'split') return
 
   const household = await db.getHousehold(after.householdId)
   if (!household) return

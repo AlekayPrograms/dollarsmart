@@ -3,7 +3,6 @@ import { getCategory } from '../lib/categories.js'
 
 const POOL_BADGE = {
   personal: { label: 'Personal', color: 'rgba(148,163,184,0.15)' },
-  shared:   { label: 'Shared',   color: 'rgba(16,185,129,0.15)' },
   split:    { label: 'Split',    color: 'rgba(59,130,246,0.15)' },
 }
 
@@ -28,7 +27,7 @@ export default function ExpenseCard({
   const selectable = selectMode && !!onToggleSelect
   const canEdit = !!onUpdateMerchant && !isIncome && !selectMode
 
-  const isShared = !isIncome && (expense.poolType === 'shared' || expense.poolType === 'split')
+  const isSplit = !isIncome && expense.poolType === 'split'
   const votes = expense.removalVotes || {}
   const iVoted = currentUid ? !!votes[currentUid] : false
   const partnerVoted = memberUids.some((u) => u !== currentUid && votes[u])
@@ -172,8 +171,8 @@ export default function ExpenseCard({
             </button>
           )}
 
-          {/* Shared/split expenses are removed by mutual vote, not deleted. */}
-          {isShared && onVoteRemove ? (
+          {/* Split expenses are removed by mutual vote, not deleted. */}
+          {isSplit && onVoteRemove ? (
             iVoted && partnerVoted ? (
               <span style={{ fontSize: '0.66rem', color: 'var(--subtle)' }}>removing…</span>
             ) : partnerVoted && !iVoted ? (
