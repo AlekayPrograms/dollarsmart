@@ -85,7 +85,7 @@ export default function ExpenseCard({
         {cat.emoji}
       </div>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 600, fontSize: '0.9375rem' }}>{cat.label}</span>
           {byPartner && (
