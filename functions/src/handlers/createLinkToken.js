@@ -9,6 +9,8 @@ function buildLinkTokenRequest(uid, webhookUrl) {
     user: { client_user_id: uid },
     client_name: 'DollarSmart',
     products: ['transactions'],
+    // Pull up to ~2 years of history when an account is connected (Plaid max).
+    transactions: { days_requested: 730 },
     country_codes: ['US'],
     language: 'en',
     webhook: webhookUrl,
