@@ -46,16 +46,17 @@ function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory, s
       for (const tx of [...added, ...modified]) {
         if (tx.pending) continue          // wait for it to post
         const primary = tx.personal_finance_category && tx.personal_finance_category.primary
-        // Recognize Zelle (and similar P2P) by name so an incoming Zelle always
-        // counts as income even when Plaid's category doesn't say so.
-        const looksLikeZelle = /zelle/i.test(`${tx.merchant_name || ''} ${tx.name || ''}`)
+        // Recognize common P2P transfers (Zelle, Venmo, Cash App, PayPal) by
+        // name so an incoming one always counts as income even when Plaid's
+        // category doesn't say so.
+        const looksLikeP2P = /zelle|venmo|cash ?app|paypal/i.test(`${tx.merchant_name || ''} ${tx.name || ''}`)
         // Plaid uses positive amounts for outflow (spending) and negative for
         // inflow (deposits, refunds, transfers). Prompt to log spending as an
-        // expense, and genuine deposits (paychecks, transfers in, Zelle in) as
+        // expense, and genuine deposits (paychecks, transfers in, P2P in) as
         // income. Skip everything else (refunds, transfers out) to avoid noise.
         let entryType
         if (tx.amount > 0) entryType = 'expense'
-        else if (tx.amount < 0 && (primary === 'INCOME' || primary === 'TRANSFER_IN' || looksLikeZelle)) entryType = 'income'
+        else if (tx.amount < 0 && (primary === 'INCOME' || primary === 'TRANSFER_IN' || looksLikeP2P)) entryType = 'income'
         else continue
 
         const ref = db.doc(`pendingTransactions/${tx.transaction_id}`)

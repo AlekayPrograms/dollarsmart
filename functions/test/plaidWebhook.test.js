@@ -108,6 +108,21 @@ describe('makeProcessTransactionsSync', () => {
     expect(alerts).toHaveLength(1)
   })
 
+  it('treats an incoming Venmo cashout as income via name match', async () => {
+    const db = fakeDb({ 'plaidItems/u1': { itemId: 'item-1', accessToken: 'acc', cursor: null } })
+    const { process, alerts } = makeSync(db, {
+      added: [
+        { transaction_id: 'tx-v', amount: -67.95, merchant_name: '', name: 'VENMO DES:CASHOUT', date: '2026-06-15', pending: false,
+          personal_finance_category: { primary: 'OTHER' } },
+      ],
+    })
+
+    await process('item-1')
+
+    expect(db.writes['pendingTransactions/tx-v'].data).toMatchObject({ uid: 'u1', amount: 67.95, entryType: 'income' })
+    expect(alerts).toHaveLength(1)
+  })
+
   it('skips inflows that are not income (e.g. refunds / transfers out)', async () => {
     const db = fakeDb({ 'plaidItems/u1': { itemId: 'item-1', accessToken: 'acc', cursor: null } })
     const { process, alerts } = makeSync(db, {
