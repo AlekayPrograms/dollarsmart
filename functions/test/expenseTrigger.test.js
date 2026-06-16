@@ -63,7 +63,7 @@ describe('handleApproachingTarget', () => {
     const db = makeDb({ household, users, monthTotal: 85 })
     await handleApproachingTarget({ db, messaging, expense: { type: 'expense', poolType: 'shared', amount: 10, householdId: 'h1' } })
     expect(sent).toHaveLength(2)
-    expect(sent[0].notification.body).toContain('80%')
+    expect(sent[0].data.body).toContain('80%')
   })
 
   it('does not fire again once already past 80%', async () => {
@@ -80,7 +80,7 @@ describe('handleApproachingTarget', () => {
     const db = makeDb({ household, users, monthTotal: 105 })
     await handleApproachingTarget({ db, messaging, expense: { type: 'expense', poolType: 'shared', amount: 10, householdId: 'h1' } })
     expect(sent).toHaveLength(2)
-    expect(sent[0].notification.body).toContain('100%')
+    expect(sent[0].data.body).toContain('100%')
   })
 
   it('does nothing when no shared target is set', async () => {

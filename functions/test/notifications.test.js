@@ -10,22 +10,29 @@ describe('buildTransactionMessage', () => {
       pendingId: 'tx-1',
     })
     expect(msg.token).toBe('tok-1')
-    expect(msg.notification.title).toBe('DollarSmart')
-    expect(msg.notification.body).toBe('Looks like you spent $24.50 at Chipotle — log it?')
-    expect(msg.data).toEqual({ amount: '24.5', categoryId: 'food', entryType: 'expense', pendingId: 'tx-1', merchantName: 'Chipotle' })
+    expect(msg.notification).toBeUndefined() // data-only, no notification payload
+    expect(msg.data.title).toBe('DollarSmart')
+    expect(msg.data.body).toBe('Looks like you spent $24.50 at Chipotle — log it?')
+    expect(msg.data).toEqual({
+      title: 'DollarSmart', body: 'Looks like you spent $24.50 at Chipotle — log it?',
+      amount: '24.5', categoryId: 'food', entryType: 'expense', pendingId: 'tx-1', merchantName: 'Chipotle',
+    })
   })
 })
 
 describe('buildIncomeMessage', () => {
   it('builds an income prompt that deep-links as income', () => {
     const msg = buildIncomeMessage({ token: 'tok-1', amount: 1500, merchantName: 'ACME PAYROLL', pendingId: 'tx-7' })
-    expect(msg.notification.body).toBe('Received $1500.00 from ACME PAYROLL — log as income?')
-    expect(msg.data).toEqual({ amount: '1500', categoryId: 'other', entryType: 'income', pendingId: 'tx-7', merchantName: 'ACME PAYROLL' })
+    expect(msg.data.body).toBe('Received $1500.00 from ACME PAYROLL — log as income?')
+    expect(msg.data).toEqual({
+      title: 'DollarSmart', body: 'Received $1500.00 from ACME PAYROLL — log as income?',
+      amount: '1500', categoryId: 'other', entryType: 'income', pendingId: 'tx-7', merchantName: 'ACME PAYROLL',
+    })
   })
 
   it('omits the sender clause when none is known', () => {
     const msg = buildIncomeMessage({ token: 'tok-1', amount: 50, pendingId: 'tx-8' })
-    expect(msg.notification.body).toBe('Received $50.00 — log as income?')
+    expect(msg.data.body).toBe('Received $50.00 — log as income?')
   })
 })
 
@@ -81,7 +88,7 @@ describe('makeSendTransactionAlert', () => {
     const send = makeSendTransactionAlert({ db, messaging: { send: async (m) => { sent.push(m) } } })
     await send('u1', { amount: 1500, merchantName: 'ACME PAYROLL', entryType: 'income' }, 'tx-7')
     expect(sent).toHaveLength(1)
-    expect(sent[0].notification.body).toBe('Received $1500.00 from ACME PAYROLL — log as income?')
+    expect(sent[0].data.body).toBe('Received $1500.00 from ACME PAYROLL — log as income?')
     expect(sent[0].data.entryType).toBe('income')
   })
 })

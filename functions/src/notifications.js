@@ -1,11 +1,16 @@
+// All messages are DATA-ONLY (no `notification` payload). A notification
+// payload makes the OS auto-display the push AND wakes our service worker,
+// which would display a second copy — the duplicate-notification bug. With
+// data-only, only the service worker displays it (exactly once), and it can
+// route the tap. `data` values must be strings. `path` is where a tap should
+// land (transaction prompts carry tx fields instead and open the Log screen).
+
 function buildTransactionMessage({ token, amount, merchantName = '', categoryId, pendingId, date }) {
   return {
     token,
-    notification: {
+    data: {
       title: 'DollarSmart',
       body: `Looks like you spent $${Number(amount).toFixed(2)} at ${merchantName} — log it?`,
-    },
-    data: {
       amount: String(amount),
       categoryId: String(categoryId),
       entryType: 'expense',
@@ -20,11 +25,9 @@ function buildIncomeMessage({ token, amount, merchantName = '', pendingId, date 
   const from = merchantName ? ` from ${merchantName}` : ''
   return {
     token,
-    notification: {
+    data: {
       title: 'DollarSmart',
       body: `Received $${Number(amount).toFixed(2)}${from} — log as income?`,
-    },
-    data: {
       amount: String(amount),
       categoryId: 'other',
       entryType: 'income',
@@ -65,66 +68,66 @@ function buildPartnerActivityMessage({ token, amount, categoryId, poolType }) {
   const pool = poolType === 'split' ? 'split' : 'shared'
   return {
     token,
-    notification: {
+    data: {
       title: 'DollarSmart',
       body: `Partner logged $${Number(amount).toFixed(2)} on ${label} (${pool})`,
+      path: '/expenses',
     },
-    data: {},
   }
 }
 
 function buildApproachingTargetMessage({ token, percent }) {
   return {
     token,
-    notification: {
+    data: {
       title: 'DollarSmart',
       body: `Heads up — you've used ${percent}% of your shared budget this month`,
+      path: '/',
     },
-    data: {},
   }
 }
 
 function buildDailyNudgeMessage({ token }) {
   return {
     token,
-    notification: {
+    data: {
       title: 'DollarSmart',
       body: "Don't forget to log today's expenses!",
+      path: '/log',
     },
-    data: {},
-  }
-}
-
-function buildRemovalVoteMessage({ token }) {
-  return {
-    token,
-    notification: {
-      title: 'DollarSmart',
-      body: 'Your partner wants to remove a shared expense — open the app to confirm',
-    },
-    data: {},
-  }
-}
-
-function buildRemovalCompleteMessage({ token }) {
-  return {
-    token,
-    notification: {
-      title: 'DollarSmart',
-      body: 'A shared expense was removed (you both agreed)',
-    },
-    data: {},
   }
 }
 
 function buildWeeklyInsightMessage({ token, insight }) {
   return {
     token,
-    notification: {
+    data: {
       title: 'Weekly spending insight',
       body: insight,
+      path: '/insights',
     },
-    data: {},
+  }
+}
+
+function buildRemovalVoteMessage({ token }) {
+  return {
+    token,
+    data: {
+      title: 'DollarSmart',
+      body: 'Your partner wants to remove a shared expense — open the app to confirm',
+      path: '/expenses',
+    },
+  }
+}
+
+function buildRemovalCompleteMessage({ token }) {
+  return {
+    token,
+    data: {
+      title: 'DollarSmart',
+      body: 'A shared expense was removed (you both agreed)',
+      path: '/expenses',
+    },
   }
 }
 

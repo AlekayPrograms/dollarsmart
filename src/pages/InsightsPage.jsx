@@ -29,12 +29,9 @@ function windowKeys(anchorKey, n = 6) {
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
-// Show a category's share as a whole percent, but when it's so small it would
-// round to 0%, show the exact value to 4 decimals instead.
+// Show every category's share to 4 decimal places.
 function fmtPct(pct) {
-  const p = pct * 100
-  if (p > 0 && Math.round(p) === 0) return `${p.toFixed(4)}%`
-  return `${Math.round(p)}%`
+  return `${(pct * 100).toFixed(4)}%`
 }
 
 export default function InsightsPage() {

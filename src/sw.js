@@ -23,20 +23,29 @@ const app = initializeApp({
 const messaging = getMessaging(app)
 
 onBackgroundMessage(messaging, (payload) => {
-  const { title, body } = payload.notification || {}
+  // Messages are data-only (see functions/src/notifications.js) so we display
+  // exactly one notification here and decide where a tap should go.
   const data = payload.data || {}
-  const params = new URLSearchParams()
-  if (data.amount) params.set('amount', data.amount)
-  if (data.categoryId) params.set('categoryId', data.categoryId)
-  if (data.entryType) params.set('entryType', data.entryType)
-  if (data.pendingId) params.set('pendingId', data.pendingId)
-  if (data.date) params.set('date', data.date)
-  if (data.merchantName) params.set('merchantName', data.merchantName)
-  self.registration.showNotification(title || 'DollarSmart', {
-    body: body || '',
+  let url
+  if (data.amount || data.pendingId) {
+    // A transaction prompt → open the Log screen pre-filled.
+    const params = new URLSearchParams()
+    if (data.amount) params.set('amount', data.amount)
+    if (data.categoryId) params.set('categoryId', data.categoryId)
+    if (data.entryType) params.set('entryType', data.entryType)
+    if (data.pendingId) params.set('pendingId', data.pendingId)
+    if (data.date) params.set('date', data.date)
+    if (data.merchantName) params.set('merchantName', data.merchantName)
+    url = `/log?${params.toString()}`
+  } else {
+    // Everything else routes to its own page (e.g. removal → Expenses).
+    url = data.path || '/'
+  }
+  self.registration.showNotification(data.title || 'DollarSmart', {
+    body: data.body || '',
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
-    data: { url: `/log?${params.toString()}` },
+    data: { url },
   })
 })
 
