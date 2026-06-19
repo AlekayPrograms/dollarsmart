@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
 import PageWrapper from '../components/PageWrapper.jsx'
 import { useExpenses } from '../hooks/useExpenses.js'
 import { monthlyTotals, categoryBreakdown } from '../lib/trends.js'
 import { getCategory } from '../lib/categories.js'
+import { spring } from '../lib/motion.js'
 
 // 'YYYY-MM' key for a stored date (Firestore Timestamp | Date | string).
 function monthKeyOf(date) {
@@ -30,9 +32,9 @@ function windowKeys(anchorKey, n = 6) {
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
-// Show every category's share to 4 decimal places.
 function fmtPct(pct) {
-  return `${(pct * 100).toFixed(4)}%`
+  const val = pct * 100
+  return val < 1 ? `${val.toFixed(1)}%` : `${Math.round(val)}%`
 }
 
 export default function InsightsPage() {
@@ -174,13 +176,14 @@ export default function InsightsPage() {
                 <span style={{ fontSize: '0.62rem', color: 'var(--subtle)', fontVariantNumeric: 'tabular-nums' }}>
                   {m.total > 0 ? `$${m.total.toFixed(0)}` : ''}
                 </span>
-                <div
-                  style={{
-                    width: '100%', maxWidth: 34, borderRadius: '6px 6px 2px 2px',
+                <motion.div
+                  initial={{ height: 0 }}
+                  animate={{
                     height: `${Math.max(h, m.total > 0 ? 4 : 1)}%`,
                     background: isSelected ? 'var(--accent)' : 'rgba(255,255,255,0.18)',
-                    transition: 'height 0.4s cubic-bezier(0.4,0,0.2,1), background 0.15s',
                   }}
+                  transition={{ ...spring.gentle, delay: months.indexOf(m) * 0.04 }}
+                  style={{ width: '100%', maxWidth: 34, borderRadius: '6px 6px 2px 2px' }}
                 />
                 <span style={{ fontSize: '0.65rem', fontWeight: isSelected ? 700 : 500, color: isSelected ? 'var(--text)' : 'var(--muted)' }}>
                   {m.label}
@@ -254,7 +257,12 @@ export default function InsightsPage() {
                       </span>
                     </div>
                     <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${Math.round(b.pct * 100)}%`, background: cat.color, borderRadius: 3, transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1)' }} />
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.round(b.pct * 100)}%` }}
+                        transition={spring.gentle}
+                        style={{ height: '100%', background: cat.color, borderRadius: 3 }}
+                      />
                     </div>
                   </div>
                 )
