@@ -7,6 +7,10 @@ function fakeDb(initialItems) {
     doc(path) {
       return {
         set: async (data, opts) => { writes[path] = { ...(writes[path] || {}), data, opts } },
+        create: async (data) => {
+          if (Object.prototype.hasOwnProperty.call(writes, path)) throw new Error('ALREADY_EXISTS')
+          writes[path] = { data }
+        },
         get: async () => ({ exists: Object.prototype.hasOwnProperty.call(writes, path) }),
         delete: async () => { delete writes[path] },
       }

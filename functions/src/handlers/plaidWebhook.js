@@ -65,24 +65,29 @@ function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory, s
           entryType = 'income'
         } else continue
 
-        const ref = db.doc(`pendingTransactions/${tx.transaction_id}`)
-        const existing = await ref.get()
-        if (existing.exists) continue      // already queued — don't double-prompt
-
         const amount = Math.abs(tx.amount)
         const categoryId = entryType === 'income'
           ? 'other'
           : merchantToCategory(tx.merchant_name || tx.name, primary)
-        await ref.set({
-          uid: item.uid,
-          amount,
-          merchantName: tx.merchant_name || tx.name || 'Unknown',
-          categoryId,
-          entryType,
-          date: tx.date,
-          status: 'pending',
-          createdAt: new Date().toISOString(),
-        })
+
+        // Atomic create keyed by transaction_id. If Plaid delivers overlapping
+        // webhooks (e.g. SYNC_UPDATES_AVAILABLE + DEFAULT_UPDATE) that race
+        // through this loop, only ONE create succeeds; the rest throw and skip
+        // the alert — so the user is prompted exactly once per transaction.
+        try {
+          await db.doc(`pendingTransactions/${tx.transaction_id}`).create({
+            uid: item.uid,
+            amount,
+            merchantName: tx.merchant_name || tx.name || 'Unknown',
+            categoryId,
+            entryType,
+            date: tx.date,
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+          })
+        } catch {
+          continue // already queued (idempotent across concurrent deliveries)
+        }
         await sendAlert(item.uid, { ...tx, amount, categoryId, entryType }, tx.transaction_id)
       }
 
