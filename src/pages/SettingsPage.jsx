@@ -29,7 +29,7 @@ function Section({ label, children }) {
 
 function Row({ children, style }) {
   return (
-    <div style={{ padding: '0.75rem 1.125rem', borderBottom: '1px solid var(--border)', ...style }}>
+    <div style={{ padding: '0.875rem 1.125rem', borderBottom: '1px solid var(--border)', ...style }}>
       {children}
     </div>
   )
@@ -116,7 +116,7 @@ export default function SettingsPage() {
   return (
     <PageWrapper className="page-center" style={{ justifyContent: 'flex-start', gap: '1.5rem' }}>
       <div style={{ width: '100%', maxWidth: 440 }}>
-        <h2 style={{ margin: 0, fontSize: '1.375rem', fontWeight: 700, letterSpacing: '-0.02em' }}>Settings</h2>
+        <h2 style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 700, letterSpacing: '-0.02em' }}>Settings</h2>
       </div>
 
       <InstallAppButton />
