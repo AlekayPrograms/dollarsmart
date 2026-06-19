@@ -19,6 +19,9 @@ ui-debug.log
 # Qwen run logs
 .qwen/
 
+# Superpowers brainstorm sessions
+.superpowers/
+
 # Editor / OS
 .vscode/
 .idea/
