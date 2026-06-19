@@ -2,12 +2,14 @@ import { Link } from 'react-router-dom'
 import PageWrapper from '../components/PageWrapper.jsx'
 import { useExpenses } from '../hooks/useExpenses.js'
 import { useMonthlyTargets } from '../hooks/useMonthlyTargets.js'
-import { sumByCategory, budgetProgress } from '../lib/budget.js'
+import { sumByCategory, budgetProgress, leftToSpend } from '../lib/budget.js'
 import { CATEGORIES } from '../lib/categories.js'
 import ProgressBar from '../components/ProgressBar.jsx'
 import PendingTransactionBanner from '../components/PendingTransactionBanner.jsx'
 import ReconnectBanner from '../components/ReconnectBanner.jsx'
 import BankBalanceCard from '../components/BankBalanceCard.jsx'
+import AnimatedNumber from '../components/ui/AnimatedNumber.jsx'
+import EmptyState from '../components/ui/EmptyState.jsx'
 
 function toMs(date) {
   if (!date) return 0
@@ -32,6 +34,13 @@ export default function HomePage() {
     (spentByCategory[c.id] ?? 0) > 0 || (personalTargets[c.id] ?? 0) > 0
   )
 
+  const hero = leftToSpend(spentByCategory, personalTargets)
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const daysLeft = daysInMonth - now.getDate()
+  const dailyPace = hero && daysLeft > 0 ? hero.left / daysLeft : null
+  const expectedDailyRate = hero ? hero.total / daysInMonth : null
+  const onPace = dailyPace !== null && expectedDailyRate !== null && dailyPace >= expectedDailyRate * 0.85
+
   return (
     <PageWrapper className="page-center" style={{ justifyContent: 'flex-start', gap: '1rem' }}>
       <div style={{ width: '100%', maxWidth: 440, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -50,6 +59,58 @@ export default function HomePage() {
       <ReconnectBanner />
 
       <BankBalanceCard />
+
+      {hero && (
+        <div style={{
+          width: '100%', maxWidth: 440,
+          background: 'var(--surface)', borderRadius: 'var(--radius-xl)',
+          border: '1px solid var(--border)', padding: '1.125rem 1.25rem',
+          boxShadow: 'var(--shadow-card)',
+        }}>
+          <p style={{ margin: '0 0 4px', fontSize: 'var(--text-xs)', color: 'var(--subtle)', textTransform: 'uppercase', letterSpacing: '.1em', fontWeight: 700 }}>
+            Left to spend
+          </p>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+            <AnimatedNumber
+              value={hero.left}
+              prefix="$"
+              decimals={0}
+              style={{
+                fontSize: '3rem', fontWeight: 700, letterSpacing: '-2px', lineHeight: 1,
+                color: hero.left < 0 ? 'var(--danger)' : '#ffffff',
+              }}
+            />
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--subtle)', paddingBottom: 4 }}>
+              / ${hero.total.toFixed(0)}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+            {hero.left >= 0 ? (
+              <span style={{
+                fontSize: 'var(--text-xs)', fontWeight: 700, padding: '3px 9px', borderRadius: 20,
+                background: 'rgba(16,185,129,.15)', color: 'var(--accent)',
+              }}>
+                {onPace ? '✓ On pace' : '⚠ Spending fast'}
+              </span>
+            ) : (
+              <span style={{
+                fontSize: 'var(--text-xs)', fontWeight: 700, padding: '3px 9px', borderRadius: 20,
+                background: 'rgba(248,113,113,.15)', color: 'var(--danger)',
+              }}>
+                ⚠ Over budget
+              </span>
+            )}
+            {daysLeft > 0 && dailyPace !== null && (
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--subtle)' }}>
+                ${Math.max(dailyPace, 0).toFixed(0)}/day · {daysLeft} days left
+              </span>
+            )}
+          </div>
+          <div style={{ marginTop: 14 }}>
+            <ProgressBar spent={hero.spent} target={hero.total} />
+          </div>
+        </div>
+      )}
 
       {budgetRows.length > 0 && (
         <div className="card">
@@ -82,11 +143,12 @@ export default function HomePage() {
         </div>
       )}
 
-      {budgetRows.length === 0 && (
-        <div style={{ color: 'var(--subtle)', fontSize: '0.875rem', textAlign: 'center', paddingTop: '2rem' }}>
-          <p style={{ margin: 0 }}>No expenses or targets yet.</p>
-          <p style={{ margin: '0.25rem 0 0' }}>Tap <strong>+ Log</strong> to get started.</p>
-        </div>
+      {!hero && budgetRows.length === 0 && (
+        <EmptyState
+          icon="🎯"
+          heading="Set a monthly budget"
+          sub="Go to Settings → Monthly targets to get started"
+        />
       )}
     </PageWrapper>
   )
