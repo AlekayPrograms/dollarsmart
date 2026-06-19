@@ -55,9 +55,15 @@ function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory, s
         // expense, and genuine deposits (paychecks, transfers in, P2P in) as
         // income. Skip everything else (refunds, transfers out) to avoid noise.
         let entryType
-        if (tx.amount > 0) entryType = 'expense'
-        else if (tx.amount < 0 && (primary === 'INCOME' || primary === 'TRANSFER_IN' || looksLikeP2P)) entryType = 'income'
-        else continue
+        if (tx.amount > 0) {
+          // Skip credit-card / loan payoffs (e.g. paying a card off from BofA).
+          // The underlying purchases are already captured on that card, so
+          // logging the payment too would double-count.
+          if (primary === 'LOAN_PAYMENTS') continue
+          entryType = 'expense'
+        } else if (tx.amount < 0 && (primary === 'INCOME' || primary === 'TRANSFER_IN' || looksLikeP2P)) {
+          entryType = 'income'
+        } else continue
 
         const ref = db.doc(`pendingTransactions/${tx.transaction_id}`)
         const existing = await ref.get()

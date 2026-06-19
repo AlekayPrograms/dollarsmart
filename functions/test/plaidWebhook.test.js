@@ -108,6 +108,21 @@ describe('makeProcessTransactionsSync', () => {
     expect(alerts).toHaveLength(1)
   })
 
+  it('skips credit-card / loan payments to avoid double-counting', async () => {
+    const db = fakeDb({ 'plaidItems/u1': { itemId: 'item-1', accessToken: 'acc', cursor: null } })
+    const { process, alerts } = makeSync(db, {
+      added: [
+        { transaction_id: 'tx-pay', amount: 500, merchant_name: 'BILT', name: 'Payment to Bilt', date: '2026-06-15', pending: false,
+          personal_finance_category: { primary: 'LOAN_PAYMENTS' } },
+      ],
+    })
+
+    await process('item-1')
+
+    expect(db.writes['pendingTransactions/tx-pay']).toBeUndefined()
+    expect(alerts).toHaveLength(0)
+  })
+
   it('treats an incoming Venmo cashout as income via name match', async () => {
     const db = fakeDb({ 'plaidItems/u1': { itemId: 'item-1', accessToken: 'acc', cursor: null } })
     const { process, alerts } = makeSync(db, {
