@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import PageWrapper from '../components/PageWrapper.jsx'
 import { useExpenses } from '../hooks/useExpenses.js'
 import { useMonthlyTargets } from '../hooks/useMonthlyTargets.js'
 import { sumByCategory, budgetProgress } from '../lib/budget.js'
@@ -32,7 +33,7 @@ export default function HomePage() {
   )
 
   return (
-    <div className="page-center" style={{ justifyContent: 'flex-start', gap: '1rem' }}>
+    <PageWrapper className="page-center" style={{ justifyContent: 'flex-start', gap: '1rem' }}>
       <div style={{ width: '100%', maxWidth: 440, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--subtle)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>
@@ -87,6 +88,6 @@ export default function HomePage() {
           <p style={{ margin: '0.25rem 0 0' }}>Tap <strong>+ Log</strong> to get started.</p>
         </div>
       )}
-    </div>
+    </PageWrapper>
   )
 }

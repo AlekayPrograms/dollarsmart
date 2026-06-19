@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
+import PageWrapper from '../components/PageWrapper.jsx'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { useExpenses } from '../hooks/useExpenses.js'
 import { useSharedExpenses } from '../hooks/useSharedExpenses.js'
@@ -98,7 +99,7 @@ export default function ExpensesPage() {
   }, [selected, exitSelect])
 
   return (
-    <div className="page-center" style={{ justifyContent: 'flex-start', gap: '0.875rem' }}>
+    <PageWrapper className="page-center" style={{ justifyContent: 'flex-start', gap: '0.875rem' }}>
       <div style={{ width: '100%', maxWidth: 440, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ margin: 0, fontSize: '1.375rem', fontWeight: 700, letterSpacing: '-0.02em' }}>Expenses</h2>
         <button
@@ -169,6 +170,6 @@ export default function ExpensesPage() {
           onExpire={handleExpire}
         />
       )}
-    </div>
+    </PageWrapper>
   )
 }

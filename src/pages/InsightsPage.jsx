@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import PageWrapper from '../components/PageWrapper.jsx'
 import { useExpenses } from '../hooks/useExpenses.js'
 import { monthlyTotals, categoryBreakdown } from '../lib/trends.js'
 import { getCategory } from '../lib/categories.js'
@@ -109,7 +110,7 @@ export default function InsightsPage() {
   }
 
   return (
-    <div className="page-center" style={{ justifyContent: 'flex-start', gap: '1.25rem' }}>
+    <PageWrapper className="page-center" style={{ justifyContent: 'flex-start', gap: '1.25rem' }}>
       <div style={{ width: '100%', maxWidth: 440 }}>
         <h2 style={{ margin: 0, fontSize: '1.375rem', fontWeight: 700, letterSpacing: '-0.02em' }}>Insights</h2>
         <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: 'var(--subtle)' }}>
@@ -262,6 +263,6 @@ export default function InsightsPage() {
           </>
         )}
       </div>
-    </div>
+    </PageWrapper>
   )
 }
