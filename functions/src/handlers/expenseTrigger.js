@@ -1,6 +1,6 @@
 const { onDocumentCreated } = require('firebase-functions/v2/firestore')
 const admin = require('firebase-admin')
-const { buildPartnerActivityMessage } = require('../notifications')
+const { buildPartnerActivityMessage, buildApproachingTargetMessage } = require('../notifications')
 
 function adminDbAdapter() {
   const fs = admin.firestore()
@@ -12,6 +12,17 @@ function adminDbAdapter() {
     async getUser(uid) {
       const snap = await fs.doc(`users/${uid}`).get()
       return snap.exists ? snap.data() : null
+    },
+    // The user's own month-to-date spending in one category.
+    async getMonthCategoryTotal(uid, categoryId, monthStart) {
+      const snap = await fs.collection('expenses')
+        .where('uid', '==', uid)
+        .where('date', '>=', monthStart)
+        .get()
+      return snap.docs
+        .map((d) => d.data())
+        .filter((e) => e.type === 'expense' && e.categoryId === categoryId)
+        .reduce((sum, e) => sum + e.amount, 0)
     },
   }
 }
@@ -39,10 +50,42 @@ async function handlePartnerActivity({ db, messaging, expense }) {
   }))
 }
 
+// Nudge the logger when their own month-to-date spending in a category crosses
+// 80% or 100% of their personal monthly target for it.
+async function handlePersonalTarget({ db, messaging, expense }) {
+  if (expense.type !== 'expense') return
+  const user = await db.getUser(expense.uid)
+  if (!user?.fcmToken) return
+  if (user.notificationPrefs?.approachingTarget === false) return
+  const target = user.monthlyTargets?.[expense.categoryId]
+  if (!target || target <= 0) return
+
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const totalAfter = await db.getMonthCategoryTotal(expense.uid, expense.categoryId, monthStart)
+  const totalBefore = totalAfter - expense.amount
+
+  for (const threshold of [0.8, 1.0]) {
+    if (totalAfter / target >= threshold && totalBefore / target < threshold) {
+      await messaging.send(buildApproachingTargetMessage({
+        token: user.fcmToken,
+        percent: Math.round(threshold * 100),
+        categoryId: expense.categoryId,
+      }))
+      break
+    }
+  }
+}
+
 const expenseTrigger = onDocumentCreated('expenses/{expenseId}', async (event) => {
   const expense = event.data.data()
   if (!expense.householdId) return
-  await handlePartnerActivity({ db: adminDbAdapter(), messaging: admin.messaging(), expense })
+  const db = adminDbAdapter()
+  const messaging = admin.messaging()
+  await Promise.all([
+    handlePartnerActivity({ db, messaging, expense }),
+    handlePersonalTarget({ db, messaging, expense }),
+  ])
 })
 
-module.exports = { expenseTrigger, handlePartnerActivity }
+module.exports = { expenseTrigger, handlePartnerActivity, handlePersonalTarget }

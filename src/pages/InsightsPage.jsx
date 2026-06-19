@@ -83,6 +83,13 @@ export default function InsightsPage() {
   const breakdown = useMemo(() => categoryBreakdown(selectedExpenses), [selectedExpenses])
   const monthTotal = breakdown.reduce((a, b) => a + b.total, 0)
 
+  // Savings rate = (income − expenses) / income, for the selected month.
+  const monthIncome = useMemo(
+    () => selectedExpenses.filter((e) => e.type === 'income').reduce((s, e) => s + e.amount, 0),
+    [selectedExpenses],
+  )
+  const savingsRate = monthIncome > 0 ? Math.round(((monthIncome - monthTotal) / monthIncome) * 100) : null
+
   // Build a conic-gradient ring from the category shares.
   const donut = useMemo(() => {
     let acc = 0
@@ -186,6 +193,17 @@ export default function InsightsPage() {
       {/* Selected month's category breakdown */}
       <div className="card">
         <p className="section-label">{breakdownLabel} by category</p>
+
+        {monthIncome > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.6rem', fontSize: '0.8rem' }}>
+            <span style={{ color: 'var(--muted)' }}>
+              Saved {savingsRate}% of ${monthIncome.toFixed(0)} income
+            </span>
+            <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: savingsRate >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
+              {savingsRate >= 0 ? '+' : ''}${(monthIncome - monthTotal).toFixed(0)}
+            </span>
+          </div>
+        )}
 
         {breakdown.length === 0 ? (
           <p style={{ color: 'var(--subtle)', fontSize: '0.85rem', margin: '0.5rem 0 0' }}>

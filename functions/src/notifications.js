@@ -71,6 +71,16 @@ function buildPartnerActivityMessage({ token, amount, categoryId, poolType }) {
   }
 }
 
+function buildApproachingTargetMessage({ token, percent, categoryId }) {
+  const cat = CATEGORY_LABELS[categoryId] || 'a category'
+  const verb = percent >= 100 ? "you've hit" : "you've used"
+  return { token, data: { title: 'DollarSmart', body: `Heads up — ${verb} ${percent}% of your ${cat} budget this month`, path: '/' } }
+}
+
+function buildMonthlyRecapMessage({ token, monthName, summary }) {
+  return { token, data: { title: `Your ${monthName} recap`, body: summary, path: '/insights' } }
+}
+
 function buildDailyNudgeMessage({ token }) {
   return { token, data: { title: 'DollarSmart', body: "Don't forget to log today's expenses!", path: '/log' } }
 }
@@ -92,6 +102,8 @@ module.exports = {
   buildIncomeMessage,
   makeSendTransactionAlert,
   buildPartnerActivityMessage,
+  buildApproachingTargetMessage,
+  buildMonthlyRecapMessage,
   buildDailyNudgeMessage,
   buildWeeklyInsightMessage,
   buildRemovalVoteMessage,

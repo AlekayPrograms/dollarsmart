@@ -3,6 +3,8 @@ export const DEFAULT_PREFS = {
   dailyNudge: false,
   nudgeTime: '20:00',
   partnerActivity: true,
+  approachingTarget: true,
+  monthlyRecap: true,
   weeklyInsight: true,
 }
 
