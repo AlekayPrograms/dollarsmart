@@ -10,13 +10,9 @@ describe('buildTransactionMessage', () => {
       pendingId: 'tx-1',
     })
     expect(msg.token).toBe('tok-1')
-    // notification payload (so iOS displays it)
-    expect(msg.notification.title).toBe('DollarSmart')
-    expect(msg.notification.body).toBe('Looks like you spent $24.50 at Chipotle — log it?')
-    // tap routing to the Log screen, pre-filled
-    expect(msg.webpush.fcmOptions.link).toContain('/log?')
-    expect(msg.webpush.fcmOptions.link).toContain('amount=24.5')
-    expect(msg.webpush.fcmOptions.link).toContain('entryType=expense')
+    expect(msg.notification).toBeUndefined() // data-only (SW shows it explicitly)
+    expect(msg.data.title).toBe('DollarSmart')
+    expect(msg.data.body).toBe('Looks like you spent $24.50 at Chipotle — log it?')
     expect(msg.data.entryType).toBe('expense')
     expect(msg.data.pendingId).toBe('tx-1')
   })
@@ -25,14 +21,13 @@ describe('buildTransactionMessage', () => {
 describe('buildIncomeMessage', () => {
   it('builds an income prompt that deep-links as income', () => {
     const msg = buildIncomeMessage({ token: 'tok-1', amount: 1500, merchantName: 'ACME PAYROLL', pendingId: 'tx-7' })
-    expect(msg.notification.body).toBe('Received $1500.00 from ACME PAYROLL — log as income?')
-    expect(msg.webpush.fcmOptions.link).toContain('entryType=income')
+    expect(msg.data.body).toBe('Received $1500.00 from ACME PAYROLL — log as income?')
     expect(msg.data.entryType).toBe('income')
   })
 
   it('omits the sender clause when none is known', () => {
     const msg = buildIncomeMessage({ token: 'tok-1', amount: 50, pendingId: 'tx-8' })
-    expect(msg.notification.body).toBe('Received $50.00 — log as income?')
+    expect(msg.data.body).toBe('Received $50.00 — log as income?')
   })
 })
 
@@ -88,7 +83,7 @@ describe('makeSendTransactionAlert', () => {
     const send = makeSendTransactionAlert({ db, messaging: { send: async (m) => { sent.push(m) } } })
     await send('u1', { amount: 1500, merchantName: 'ACME PAYROLL', entryType: 'income' }, 'tx-7')
     expect(sent).toHaveLength(1)
-    expect(sent[0].notification.body).toBe('Received $1500.00 from ACME PAYROLL — log as income?')
+    expect(sent[0].data.body).toBe('Received $1500.00 from ACME PAYROLL — log as income?')
     expect(sent[0].data.entryType).toBe('income')
   })
 })

@@ -1,50 +1,40 @@
-// Cross-platform FCM web push. Each message carries:
-//  - notification {title, body}: required for iOS web push to display at all
-//    (iOS drops data-only/"silent" pushes), and shown once by FCM.
-//  - webpush.fcmOptions.link: where a tap should land (FCM opens it).
-//  - data: kept for any in-app/foreground use.
-// The service worker does NOT call showNotification (that double-displayed on
-// Android); FCM auto-displays the single notification and handles the click.
+// DATA-ONLY messages. The service worker's onBackgroundMessage explicitly calls
+// showNotification — this is required on iOS Safari PWAs (FCM's auto-display
+// does not fire there) and avoids the Android double (data-only doesn't
+// auto-display, so only our SW shows it). `data` values must be strings.
+// `path` is the tap target; transaction prompts carry tx fields and open Log.
 
-function msg({ token, title, body, link, data = {} }) {
+function buildTransactionMessage({ token, amount, merchantName = '', categoryId, pendingId, date }) {
   return {
     token,
-    notification: { title, body },
-    data: { title, body, ...data },
-    webpush: {
-      fcmOptions: { link },
-      notification: { title, body, icon: '/pwa-192x192.png' },
+    data: {
+      title: 'DollarSmart',
+      body: `Looks like you spent $${Number(amount).toFixed(2)} at ${merchantName} — log it?`,
+      amount: String(amount),
+      categoryId: String(categoryId),
+      entryType: 'expense',
+      pendingId: String(pendingId),
+      ...(date ? { date: String(date) } : {}),
+      ...(merchantName ? { merchantName: String(merchantName) } : {}),
     },
   }
 }
 
-function logLink(fields) {
-  const params = new URLSearchParams()
-  for (const [k, v] of Object.entries(fields)) {
-    if (v !== undefined && v !== null && v !== '') params.set(k, String(v))
-  }
-  return `/log?${params.toString()}`
-}
-
-function buildTransactionMessage({ token, amount, merchantName = '', categoryId, pendingId, date }) {
-  return msg({
-    token,
-    title: 'DollarSmart',
-    body: `Looks like you spent $${Number(amount).toFixed(2)} at ${merchantName} — log it?`,
-    link: logLink({ amount, categoryId, entryType: 'expense', pendingId, date, merchantName }),
-    data: { amount: String(amount), categoryId: String(categoryId), entryType: 'expense', pendingId: String(pendingId), date, merchantName },
-  })
-}
-
 function buildIncomeMessage({ token, amount, merchantName = '', pendingId, date }) {
   const from = merchantName ? ` from ${merchantName}` : ''
-  return msg({
+  return {
     token,
-    title: 'DollarSmart',
-    body: `Received $${Number(amount).toFixed(2)}${from} — log as income?`,
-    link: logLink({ amount, categoryId: 'other', entryType: 'income', pendingId, date, merchantName }),
-    data: { amount: String(amount), categoryId: 'other', entryType: 'income', pendingId: String(pendingId), date, merchantName },
-  })
+    data: {
+      title: 'DollarSmart',
+      body: `Received $${Number(amount).toFixed(2)}${from} — log as income?`,
+      amount: String(amount),
+      categoryId: 'other',
+      entryType: 'income',
+      pendingId: String(pendingId),
+      ...(date ? { date: String(date) } : {}),
+      ...(merchantName ? { merchantName: String(merchantName) } : {}),
+    },
+  }
 }
 
 function makeSendTransactionAlert({ db, messaging }) {
@@ -75,28 +65,26 @@ const CATEGORY_LABELS = {
 function buildPartnerActivityMessage({ token, amount, categoryId, poolType }) {
   const label = CATEGORY_LABELS[categoryId] || 'something'
   const pool = poolType === 'split' ? 'split' : 'shared'
-  return msg({
+  return {
     token,
-    title: 'DollarSmart',
-    body: `Partner logged $${Number(amount).toFixed(2)} on ${label} (${pool})`,
-    link: '/expenses',
-  })
+    data: { title: 'DollarSmart', body: `Partner logged $${Number(amount).toFixed(2)} on ${label} (${pool})`, path: '/expenses' },
+  }
 }
 
 function buildDailyNudgeMessage({ token }) {
-  return msg({ token, title: 'DollarSmart', body: "Don't forget to log today's expenses!", link: '/log' })
+  return { token, data: { title: 'DollarSmart', body: "Don't forget to log today's expenses!", path: '/log' } }
 }
 
 function buildWeeklyInsightMessage({ token, insight }) {
-  return msg({ token, title: 'Weekly spending insight', body: insight, link: '/insights' })
+  return { token, data: { title: 'Weekly spending insight', body: insight, path: '/insights' } }
 }
 
 function buildRemovalVoteMessage({ token }) {
-  return msg({ token, title: 'DollarSmart', body: 'Your partner wants to remove a split expense — open the app to confirm', link: '/expenses' })
+  return { token, data: { title: 'DollarSmart', body: 'Your partner wants to remove a split expense — open the app to confirm', path: '/expenses' } }
 }
 
 function buildRemovalCompleteMessage({ token }) {
-  return msg({ token, title: 'DollarSmart', body: 'A split expense was removed (you both agreed)', link: '/expenses' })
+  return { token, data: { title: 'DollarSmart', body: 'A split expense was removed (you both agreed)', path: '/expenses' } }
 }
 
 module.exports = {
