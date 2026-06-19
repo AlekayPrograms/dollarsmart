@@ -34,6 +34,9 @@ export default function ExpenseCard({
 
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(expense.merchantName || '')
+  const [noteExpanded, setNoteExpanded] = useState(false)
+  const NOTE_LIMIT = 60
+  const longNote = expense.note && expense.note.length > NOTE_LIMIT
 
   async function commit() {
     setEditing(false)
@@ -131,8 +134,18 @@ export default function ExpenseCard({
         ) : null}
 
         {expense.note && (
-          <div style={{ fontSize: '0.75rem', color: 'var(--subtle)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
-            {expense.note}
+          <div
+            onClick={longNote ? () => setNoteExpanded((v) => !v) : undefined}
+            style={{ fontSize: 'var(--text-xs)', color: 'var(--subtle)', marginTop: 2, cursor: longNote ? 'pointer' : 'default' }}
+          >
+            {noteExpanded || !longNote
+              ? expense.note
+              : expense.note.slice(0, NOTE_LIMIT) + '…'}
+            {longNote && (
+              <span style={{ color: 'var(--accent)', fontWeight: 600, marginLeft: 4 }}>
+                {noteExpanded ? '▴ less' : '▾ more'}
+              </span>
+            )}
           </div>
         )}
 
