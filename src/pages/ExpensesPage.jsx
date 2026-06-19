@@ -10,6 +10,8 @@ import ExpenseCard from '../components/ExpenseCard.jsx'
 import FilterBar from '../components/FilterBar.jsx'
 import UndoToast from '../components/UndoToast.jsx'
 import EditExpenseModal from '../components/EditExpenseModal.jsx'
+import Skeleton from '../components/ui/Skeleton.jsx'
+import EmptyState from '../components/ui/EmptyState.jsx'
 
 function dateMs(d) {
   if (!d) return 0
@@ -112,9 +114,21 @@ export default function ExpensesPage() {
 
       <FilterBar filters={filters} onChange={setFilters} years={years} />
 
-      {loading && <p style={{ color: 'var(--subtle)', fontSize: '0.875rem' }}>Loading…</p>}
+      {loading && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', maxWidth: 440 }}>
+          {[...Array(5)].map((_, i) => (
+            <Skeleton key={i} height={72} borderRadius={14} />
+          ))}
+        </div>
+      )}
       {!loading && visible.length === 0 && (
-        <p style={{ color: 'var(--subtle)', fontSize: '0.875rem' }}>No expenses match this filter.</p>
+        <EmptyState
+          icon="🧾"
+          heading="No expenses here"
+          sub={filters.pool !== 'all' || filters.category !== 'all' || filters.period.mode !== 'all'
+            ? 'Try adjusting your filters'
+            : 'Tap + Log to add your first one'}
+        />
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', maxWidth: 440 }}>
