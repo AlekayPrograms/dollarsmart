@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion'
+import { spring } from '../lib/motion.js'
 import { budgetProgress } from '../lib/budget.js'
 
 const TRACK = 'rgba(255,255,255,0.06)'
@@ -24,13 +26,12 @@ export default function ProgressBar({ spent, target, label, color }) {
         </div>
       )}
       <div style={{ height: 5, background: TRACK, borderRadius: 999, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%',
-          width: `${pct}%`,
-          background: fill,
-          borderRadius: 999,
-          transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)',
-        }} />
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={spring.gentle}
+          style={{ height: '100%', borderRadius: 999, background: fill }}
+        />
       </div>
     </div>
   )
