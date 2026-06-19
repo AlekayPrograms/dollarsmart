@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../firebase/client.js'
 import { useAuth } from '../contexts/AuthContext.jsx'
-import ConnectBankButton from './ConnectBankButton.jsx'
+
+// Lazy so the Plaid SDK isn't pulled into the home/landing chunk — it only
+// loads if this banner actually needs to show.
+const ConnectBankButton = lazy(() => import('./ConnectBankButton.jsx'))
 
 /**
  * Non-blocking banner shown only when the user's bank connection needs a
@@ -29,7 +32,9 @@ export default function ReconnectBanner() {
       <div style={{ fontSize: '0.9rem', color: '#FDE68A' }}>
         Your bank connection needs a refresh — reconnect to keep detecting transactions.
       </div>
-      <ConnectBankButton label="Reconnect bank" />
+      <Suspense fallback={null}>
+        <ConnectBankButton label="Reconnect bank" />
+      </Suspense>
     </div>
   )
 }

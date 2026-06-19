@@ -31,6 +31,7 @@ export default function EditExpenseModal({ expense, onSave, onClose }) {
   const [note, setNote] = useState(expense.note ?? '')
   const [dateStr, setDateStr] = useState(toDateInput(expense.date))
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   const amount = normalizeAmount(amountText)
   const canSave = validateAmount(amount) && (isIncome || categoryId) && !saving
@@ -38,6 +39,7 @@ export default function EditExpenseModal({ expense, onSave, onClose }) {
   async function handleSave() {
     if (!canSave) return
     setSaving(true)
+    setError('')
     try {
       const nextPool = isIncome ? 'personal' : poolType
       await onSave(expense.id, {
@@ -52,6 +54,7 @@ export default function EditExpenseModal({ expense, onSave, onClose }) {
       onClose()
     } catch (err) {
       console.error('Failed to update expense', err)
+      setError("Couldn't save — check your connection and try again.")
       setSaving(false)
     }
   }
@@ -129,6 +132,10 @@ export default function EditExpenseModal({ expense, onSave, onClose }) {
             style={fieldStyle}
           />
         </div>
+
+        {error && (
+          <p style={{ width: '100%', maxWidth: 360, margin: 0, color: 'var(--danger)', fontSize: '0.8rem' }}>{error}</p>
+        )}
 
         <div style={{ display: 'flex', gap: '1rem', width: '100%', maxWidth: 360, marginTop: '0.25rem' }}>
           <button className="btn btn-secondary" style={{ flex: 1 }} onClick={onClose}>Cancel</button>

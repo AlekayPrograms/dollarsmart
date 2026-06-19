@@ -42,6 +42,7 @@ export default function LogPage() {
   const [repeatMonthly, setRepeatMonthly] = useState(false)
   const [repeatDay, setRepeatDay] = useState(() => Number(dateStr.slice(8, 10)) || new Date().getDate())
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   const amount = normalizeAmount(amountText)
   // Income has no spending category, so it doesn't require one.
@@ -68,6 +69,7 @@ export default function LogPage() {
   async function handleSave() {
     if (!canSave) return
     setSaving(true)
+    setError('')
     try {
       await addExpense({
         uid: user.uid,
@@ -104,6 +106,7 @@ export default function LogPage() {
       navigate('/', { replace: true })
     } catch (err) {
       console.error('Failed to save', err)
+      setError("Couldn't save — check your connection and try again.")
       setSaving(false)
     }
   }
@@ -211,6 +214,10 @@ export default function LogPage() {
       >
         {showDetails ? '− Hide details' : '+ Add details'}
       </button>
+
+      {error && (
+        <p style={{ margin: 0, color: 'var(--danger)', fontSize: '0.8rem', textAlign: 'center' }}>{error}</p>
+      )}
 
       <div style={{ display: 'flex', gap: '1rem', marginTop: 'auto', paddingBottom: '1.5rem' }}>
         <button className="btn btn-secondary" onClick={() => navigate('/', { replace: true })}>

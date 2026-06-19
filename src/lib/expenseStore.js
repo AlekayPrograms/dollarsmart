@@ -11,7 +11,7 @@ import { db } from '../firebase/client.js'
  * @param {number} params.amount
  * @param {string} params.categoryId
  * @param {'expense'|'income'} params.type
- * @param {'personal'|'shared'|'split'} params.poolType
+ * @param {'personal'|'split'} params.poolType
  * @param {string} [params.note]
  * @param {Date} [params.date]
  * @param {number} [params.splitRatio]
