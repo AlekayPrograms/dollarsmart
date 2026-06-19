@@ -1,9 +1,13 @@
-import { Link } from 'react-router-dom'
+import { useState, useRef } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import PageWrapper from '../components/PageWrapper.jsx'
 import { useExpenses } from '../hooks/useExpenses.js'
 import { useMonthlyTargets } from '../hooks/useMonthlyTargets.js'
 import { sumByCategory, budgetProgress, leftToSpend } from '../lib/budget.js'
 import { CATEGORIES } from '../lib/categories.js'
+import { getQuickLogChips } from '../lib/quickLog.js'
+import { haptics } from '../lib/haptics.js'
 import ProgressBar from '../components/ProgressBar.jsx'
 import PendingTransactionBanner from '../components/PendingTransactionBanner.jsx'
 import ReconnectBanner from '../components/ReconnectBanner.jsx'
@@ -41,115 +45,196 @@ export default function HomePage() {
   const expectedDailyRate = hero ? hero.total / daysInMonth : null
   const onPace = dailyPace !== null && expectedDailyRate !== null && dailyPace >= expectedDailyRate * 0.85
 
+  const navigate = useNavigate()
+  const chips = getQuickLogChips(expenses, now)
+  const [pullProgress, setPullProgress] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+  const startYRef = useRef(null)
+  const scrollRef = useRef(null)
+  const PULL_THRESHOLD = 60
+
+  function onTouchStart(e) {
+    if (scrollRef.current?.scrollTop > 0) return
+    startYRef.current = e.touches[0].clientY
+  }
+
+  function onTouchMove(e) {
+    if (startYRef.current === null || refreshing) return
+    if (scrollRef.current?.scrollTop > 0) { startYRef.current = null; return }
+    const dy = e.touches[0].clientY - startYRef.current
+    if (dy <= 0) return
+    e.preventDefault()
+    setPullProgress(Math.min(dy / PULL_THRESHOLD, 1.5))
+  }
+
+  async function onTouchEnd() {
+    if (pullProgress >= 1) {
+      setRefreshing(true)
+      setPullProgress(0)
+      await new Promise((r) => setTimeout(r, 800))
+      setRefreshing(false)
+    } else {
+      setPullProgress(0)
+    }
+    startYRef.current = null
+  }
+
   return (
-    <PageWrapper className="page-center" style={{ justifyContent: 'flex-start', gap: '1rem' }}>
-      <div style={{ width: '100%', maxWidth: 440, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--subtle)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>
-            {monthName}
-          </p>
-          <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em' }}>DollarSmart</h1>
+    <div
+      ref={scrollRef}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      style={{ overflowY: 'auto', height: '100dvh' }}
+    >
+      <PageWrapper className="page-center" style={{ justifyContent: 'flex-start', gap: '1rem' }}>
+        {(pullProgress > 0 || refreshing) && (
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--accent)', textAlign: 'center', padding: '4px 0' }}>
+            {refreshing ? '↺ Refreshing…' : pullProgress >= 1 ? '↑ Release' : '↓ Pull to refresh'}
+          </div>
+        )}
+
+        <div style={{ width: '100%', maxWidth: 440, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--subtle)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>
+              {monthName}
+            </p>
+            <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em' }}>DollarSmart</h1>
+          </div>
+          <Link to="/log" className="btn btn-primary" style={{ textDecoration: 'none', padding: '0.6rem 1.2rem' }}>
+            + Log
+          </Link>
         </div>
-        <Link to="/log" className="btn btn-primary" style={{ textDecoration: 'none', padding: '0.6rem 1.2rem' }}>
-          + Log
-        </Link>
-      </div>
 
-      <PendingTransactionBanner />
-      <ReconnectBanner />
+        <PendingTransactionBanner />
+        <ReconnectBanner />
 
-      <BankBalanceCard />
+        <BankBalanceCard />
 
-      {hero && (
-        <div style={{
-          width: '100%', maxWidth: 440,
-          background: 'var(--surface)', borderRadius: 'var(--radius-xl)',
-          border: '1px solid var(--border)', padding: '1.125rem 1.25rem',
-          boxShadow: 'var(--shadow-card)',
-        }}>
-          <p style={{ margin: '0 0 4px', fontSize: 'var(--text-xs)', color: 'var(--subtle)', textTransform: 'uppercase', letterSpacing: '.1em', fontWeight: 700 }}>
-            Left to spend
-          </p>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-            <AnimatedNumber
-              value={hero.left}
-              prefix="$"
-              decimals={0}
-              style={{
-                fontSize: '3rem', fontWeight: 700, letterSpacing: '-2px', lineHeight: 1,
-                color: hero.left < 0 ? 'var(--danger)' : '#ffffff',
-              }}
-            />
-            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--subtle)', paddingBottom: 4 }}>
-              / ${hero.total.toFixed(0)}
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-            {hero.left >= 0 ? (
-              <span style={{
-                fontSize: 'var(--text-xs)', fontWeight: 700, padding: '3px 9px', borderRadius: 20,
-                background: 'rgba(16,185,129,.15)', color: 'var(--accent)',
-              }}>
-                {onPace ? '✓ On pace' : '⚠ Spending fast'}
+        {hero && (
+          <div style={{
+            width: '100%', maxWidth: 440,
+            background: 'var(--surface)', borderRadius: 'var(--radius-xl)',
+            border: '1px solid var(--border)', padding: '1.125rem 1.25rem',
+            boxShadow: 'var(--shadow-card)',
+          }}>
+            <p style={{ margin: '0 0 4px', fontSize: 'var(--text-xs)', color: 'var(--subtle)', textTransform: 'uppercase', letterSpacing: '.1em', fontWeight: 700 }}>
+              Left to spend
+            </p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <AnimatedNumber
+                value={hero.left}
+                prefix="$"
+                decimals={0}
+                style={{
+                  fontSize: '3rem', fontWeight: 700, letterSpacing: '-2px', lineHeight: 1,
+                  color: hero.left < 0 ? 'var(--danger)' : '#ffffff',
+                }}
+              />
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--subtle)', paddingBottom: 4 }}>
+                / ${hero.total.toFixed(0)}
               </span>
-            ) : (
-              <span style={{
-                fontSize: 'var(--text-xs)', fontWeight: 700, padding: '3px 9px', borderRadius: 20,
-                background: 'rgba(248,113,113,.15)', color: 'var(--danger)',
-              }}>
-                ⚠ Over budget
-              </span>
-            )}
-            {daysLeft > 0 && dailyPace !== null && (
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--subtle)' }}>
-                ${Math.max(dailyPace, 0).toFixed(0)}/day · {daysLeft} days left
-              </span>
-            )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+              {hero.left >= 0 ? (
+                <span style={{
+                  fontSize: 'var(--text-xs)', fontWeight: 700, padding: '3px 9px', borderRadius: 20,
+                  background: 'rgba(16,185,129,.15)', color: 'var(--accent)',
+                }}>
+                  {onPace ? '✓ On pace' : '⚠ Spending fast'}
+                </span>
+              ) : (
+                <span style={{
+                  fontSize: 'var(--text-xs)', fontWeight: 700, padding: '3px 9px', borderRadius: 20,
+                  background: 'rgba(248,113,113,.15)', color: 'var(--danger)',
+                }}>
+                  ⚠ Over budget
+                </span>
+              )}
+              {daysLeft > 0 && dailyPace !== null && (
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--subtle)' }}>
+                  ${Math.max(dailyPace, 0).toFixed(0)}/day · {daysLeft} days left
+                </span>
+              )}
+            </div>
+            <div style={{ marginTop: 14 }}>
+              <ProgressBar spent={hero.spent} target={hero.total} />
+            </div>
           </div>
-          <div style={{ marginTop: 14 }}>
-            <ProgressBar spent={hero.spent} target={hero.total} />
-          </div>
-        </div>
-      )}
+        )}
 
-      {budgetRows.length > 0 && (
-        <div className="card">
-          <p className="section-label">Personal Budget</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-            {budgetRows.map((cat) => {
-              const spent = spentByCategory[cat.id] ?? 0
-              const target = personalTargets[cat.id] ?? 0
-              const { status } = budgetProgress(spent, target)
-              return (
-                <div key={cat.id}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
-                    <span style={{ fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <span>{cat.emoji}</span>
-                      <span style={{ color: 'var(--muted)' }}>{cat.label}</span>
-                    </span>
-                    <span style={{
-                      fontSize: '0.8rem',
-                      fontVariantNumeric: 'tabular-nums',
-                      color: status === 'over' ? 'var(--danger)' : status === 'warn' ? 'var(--warn)' : 'var(--subtle)',
-                    }}>
-                      ${spent.toFixed(0)}{target > 0 ? ` / $${target.toFixed(0)}` : ''}
-                    </span>
+        {chips.length >= 3 && (
+          <div style={{ width: '100%', maxWidth: 440 }}>
+            <p style={{ margin: '0 0 0.5rem', fontSize: 'var(--text-xs)', color: 'var(--subtle)', textTransform: 'uppercase', letterSpacing: '.08em', fontWeight: 700 }}>
+              Quick log
+            </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {chips.map((chip) => {
+                const cat = CATEGORIES.find((c) => c.id === chip.categoryId)
+                if (!cat) return null
+                return (
+                  <motion.button
+                    key={`${chip.categoryId}:${chip.amount}`}
+                    whileTap={{ scale: 0.94 }}
+                    onClick={() => {
+                      haptics.light()
+                      navigate('/log', { state: { prefillAmount: chip.amount, prefillCategoryId: chip.categoryId } })
+                    }}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      background: 'var(--surface)', border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-md)', padding: '8px 12px',
+                      fontSize: 'var(--text-sm)', color: 'var(--text)',
+                      cursor: 'pointer', fontWeight: 500,
+                    }}
+                  >
+                    {cat.emoji} {cat.label} <strong>${chip.amount}</strong>
+                  </motion.button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {budgetRows.length > 0 && (
+          <div className="card">
+            <p className="section-label">Personal Budget</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+              {budgetRows.map((cat) => {
+                const spent = spentByCategory[cat.id] ?? 0
+                const target = personalTargets[cat.id] ?? 0
+                const { status } = budgetProgress(spent, target)
+                return (
+                  <div key={cat.id}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                      <span style={{ fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span>{cat.emoji}</span>
+                        <span style={{ color: 'var(--muted)' }}>{cat.label}</span>
+                      </span>
+                      <span style={{
+                        fontSize: '0.8rem',
+                        fontVariantNumeric: 'tabular-nums',
+                        color: status === 'over' ? 'var(--danger)' : status === 'warn' ? 'var(--warn)' : 'var(--subtle)',
+                      }}>
+                        ${spent.toFixed(0)}{target > 0 ? ` / $${target.toFixed(0)}` : ''}
+                      </span>
+                    </div>
+                    <ProgressBar spent={spent} target={target} color={target > 0 ? undefined : cat.color} />
                   </div>
-                  <ProgressBar spent={spent} target={target} color={target > 0 ? undefined : cat.color} />
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {!hero && budgetRows.length === 0 && (
-        <EmptyState
-          icon="🎯"
-          heading="Set a monthly budget"
-          sub="Go to Settings → Monthly targets to get started"
-        />
-      )}
-    </PageWrapper>
+        {!hero && budgetRows.length === 0 && (
+          <EmptyState
+            icon="🎯"
+            heading="Set a monthly budget"
+            sub="Go to Settings → Monthly targets to get started"
+          />
+        )}
+      </PageWrapper>
+    </div>
   )
 }
