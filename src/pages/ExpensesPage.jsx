@@ -12,6 +12,7 @@ import UndoToast from '../components/UndoToast.jsx'
 import EditExpenseModal from '../components/EditExpenseModal.jsx'
 import Skeleton from '../components/ui/Skeleton.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
+import { haptics } from '../lib/haptics.js'
 
 function dateMs(d) {
   if (!d) return 0
@@ -95,6 +96,7 @@ export default function ExpensesPage() {
   const deleteSelected = useCallback(async () => {
     const ids = [...selected]
     if (ids.length === 0) return
+    haptics.warning()
     if (!window.confirm(`Delete ${ids.length} expense${ids.length > 1 ? 's' : ''}? This can't be undone.`)) return
     for (const id of ids) await deleteExpense({ id })
     exitSelect()

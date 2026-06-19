@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { haptics } from '../lib/haptics.js'
 
 function IconHome() {
   return (
@@ -53,27 +54,27 @@ function IconSettings() {
 export default function BottomNav() {
   return (
     <nav className="bottom-nav">
-      <NavLink to="/" end className={({ isActive }) => `nav-tab${isActive ? ' active' : ''}`}>
+      <NavLink to="/" end className={({ isActive }) => `nav-tab${isActive ? ' active' : ''}`} onClick={() => haptics.light()}>
         <IconHome />
         Home
       </NavLink>
 
-      <NavLink to="/expenses" className={({ isActive }) => `nav-tab${isActive ? ' active' : ''}`}>
+      <NavLink to="/expenses" className={({ isActive }) => `nav-tab${isActive ? ' active' : ''}`} onClick={() => haptics.light()}>
         <IconList />
         Expenses
       </NavLink>
 
-      <NavLink to="/log" className="nav-tab-log">
+      <NavLink to="/log" className="nav-tab-log" onClick={() => haptics.light()}>
         <div className="nav-log-icon"><IconPlus /></div>
         Log
       </NavLink>
 
-      <NavLink to="/insights" className={({ isActive }) => `nav-tab${isActive ? ' active' : ''}`}>
+      <NavLink to="/insights" className={({ isActive }) => `nav-tab${isActive ? ' active' : ''}`} onClick={() => haptics.light()}>
         <IconChart />
         Insights
       </NavLink>
 
-      <NavLink to="/settings" className={({ isActive }) => `nav-tab${isActive ? ' active' : ''}`}>
+      <NavLink to="/settings" className={({ isActive }) => `nav-tab${isActive ? ' active' : ''}`} onClick={() => haptics.light()}>
         <IconSettings />
         Settings
       </NavLink>
