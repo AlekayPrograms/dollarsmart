@@ -3,33 +3,23 @@ import { deleteDoc, doc } from 'firebase/firestore'
 import { db } from '../firebase/client.js'
 import { getCategory } from '../lib/categories.js'
 import { usePendingTransactions } from '../hooks/usePendingTransactions.js'
+import { motion, AnimatePresence } from 'framer-motion'
 
-/**
- * Shows the most recent pending transaction with one-tap actions:
- *  - Log it: deep-links to Quick Log pre-filled (personal)
- *  - Split it: same but split ÷2 into the shared pool
- *  - Dismiss: deletes the pending doc
- */
 export default function PendingTransactionBanner() {
   const pending = usePendingTransactions()
   const navigate = useNavigate()
-  if (pending.length === 0) return null
 
-  const tx = pending[0]
-  const isIncome = tx.entryType === 'income'
-  const cat = getCategory(tx.categoryId)
-
-  async function dismiss() {
-    await deleteDoc(doc(db, 'pendingTransactions', tx.id))
+  function dismiss(id) {
+    deleteDoc(doc(db, 'pendingTransactions', id))
   }
 
-  function logIt(split) {
+  function logIt(tx, split) {
     navigate('/log', {
       state: {
         prefillAmount: tx.amount,
         prefillCategoryId: tx.categoryId,
         prefillSplit: split,
-        prefillType: isIncome ? 'income' : 'expense',
+        prefillType: tx.entryType === 'income' ? 'income' : 'expense',
         pendingId: tx.id,
         prefillMerchantName: tx.merchantName,
         prefillDate: tx.date,
@@ -37,32 +27,83 @@ export default function PendingTransactionBanner() {
     })
   }
 
+  if (pending.length === 0) return null
+
   return (
-    <div style={{
-      width: '100%', maxWidth: 440, background: 'var(--surface)', borderRadius: 14,
-      padding: '0.9rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem',
-      color: 'var(--text)', border: '1px solid var(--border)',
-    }}>
-      <div style={{ fontSize: '0.9rem' }}>
-        {isIncome ? (
-          <>💰 Received <strong>${tx.amount.toFixed(2)}</strong>{tx.merchantName ? <> from {tx.merchantName}</> : null} — log as income?</>
-        ) : (
-          <>{cat.emoji} Looks like you spent <strong>${tx.amount.toFixed(2)}</strong> at {tx.merchantName} — log it?</>
-        )}
-      </div>
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => logIt(false)}>
-          {isIncome ? 'Log income' : 'Log it'}
-        </button>
-        {!isIncome && (
-          <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => logIt(true)}>Split it</button>
-        )}
-        <button
-          onClick={dismiss}
-          style={{ background: 'none', border: 'none', color: 'var(--subtle)', cursor: 'pointer', fontSize: '1.2rem' }}
-          title="Dismiss"
-        >×</button>
-      </div>
+    <div style={{ width: '100%', maxWidth: 440, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <p style={{ margin: '0 0 2px', fontSize: 'var(--text-xs)', color: 'var(--subtle)', textTransform: 'uppercase', letterSpacing: '.08em', fontWeight: 700 }}>
+        Detected
+      </p>
+      <AnimatePresence initial={false}>
+        {pending.map((tx) => {
+          const isIncome = tx.entryType === 'income'
+          const cat = getCategory(tx.categoryId)
+          const label = tx.merchantName || 'Unknown'
+          return (
+            <motion.div
+              key={tx.id}
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              style={{
+                display: 'inline-flex', alignItems: 'center',
+                background: 'var(--surface)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-md)', overflow: 'hidden',
+              }}
+            >
+              {/* Main tap target → Log it */}
+              <motion.button
+                whileTap={{ scale: 0.94 }}
+                onClick={() => logIt(tx, false)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  background: 'none', border: 'none',
+                  padding: '8px 4px 8px 12px',
+                  fontSize: 'var(--text-sm)', color: 'var(--text)',
+                  cursor: 'pointer', fontWeight: 500,
+                }}
+              >
+                <span>{isIncome ? '💰' : cat.emoji}</span>
+                <span style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {label}
+                </span>
+                <strong>${tx.amount.toFixed(2)}</strong>
+              </motion.button>
+
+              {/* Split shortcut (expenses only) */}
+              {!isIncome && (
+                <motion.button
+                  whileTap={{ scale: 0.94 }}
+                  onClick={() => logIt(tx, true)}
+                  title="Log as split"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center',
+                    background: 'none', border: 'none', borderLeft: '1px solid var(--border)',
+                    color: 'var(--accent)', cursor: 'pointer',
+                    fontSize: '0.75rem', fontWeight: 700,
+                    padding: '8px 8px',
+                  }}
+                >
+                  ½
+                </motion.button>
+              )}
+
+              {/* Dismiss */}
+              <button
+                onClick={() => dismiss(tx.id)}
+                aria-label="Dismiss"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'none', border: 'none', borderLeft: '1px solid var(--border)',
+                  cursor: 'pointer', color: 'var(--subtle)', fontSize: '1rem', lineHeight: 1,
+                  padding: '8px 10px',
+                }}
+              >×</button>
+            </motion.div>
+          )
+        })}
+      </AnimatePresence>
     </div>
   )
 }

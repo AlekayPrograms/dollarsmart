@@ -19,8 +19,9 @@ describe('getQuickLogChips', () => {
     expect(getQuickLogChips([expense({ type: 'income' }), expense({ date: recent(2) })], now)).toEqual([])
   })
 
-  it('ignores split expenses', () => {
-    expect(getQuickLogChips([expense({ poolType: 'split' }), expense({ poolType: 'split', date: recent(2) })], now)).toEqual([])
+  it('includes split expenses (so recurring splits generate chips)', () => {
+    const chips = getQuickLogChips([expense({ poolType: 'split' }), expense({ poolType: 'split', date: recent(2) })], now)
+    expect(chips).toHaveLength(1)
   })
 
   it('ignores expenses without a merchant/brand', () => {

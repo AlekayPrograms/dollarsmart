@@ -27,7 +27,7 @@ export function getQuickLogChips(expenses, now = new Date(), limit = 3, dismisse
   const groups = {}
 
   for (const e of expenses) {
-    if (e.type !== 'expense' || e.poolType !== 'personal') continue
+    if (e.type !== 'expense') continue
     const merchant = (e.merchantName || '').trim()
     if (!merchant) continue
     const t = toMs(e.date)
