@@ -27,18 +27,28 @@ function adminDbAdapter() {
       const d = q.docs[0]
       return { uid: d.id, itemId, data: d.data(), cursorPath: `plaidItems/${d.id}` }
     },
-    // Returns this user's settle-up context ({ householdId, partnerUid, balance })
-    // or null if they're not in a two-person household. Used to recognize partner
-    // reimbursements (Venmo/Zelle) instead of treating them as income/spending.
+    // Returns settle context ({ householdId, partnerUid, balance, partnerFirstNames })
+    // or null if not in a two-person household. partnerFirstNames is used to confirm
+    // a P2P transfer is actually from/to the partner before treating it as a settlement.
     async getSettleContext(uid) {
       const userSnap = await fs.doc(`users/${uid}`).get()
       const householdId = userSnap.exists ? userSnap.data().householdId : null
       if (!householdId) return null
       const hhSnap = await fs.doc(`households/${householdId}`).get()
       if (!hhSnap.exists) return null
+      const members = hhSnap.data().members || {}
       const memberUids = hhSnap.data().memberUids || []
       const partnerUid = memberUids.find((u) => u !== uid)
       if (!partnerUid) return null
+
+      // Extract first names from the partner's nickname and display name so we can
+      // confirm a Venmo/Zelle is actually from/to them and not from a third party.
+      const partnerProfile = members[partnerUid] || {}
+      const partnerFirstNames = [partnerProfile.nickname, partnerProfile.name]
+        .filter(Boolean)
+        .map((n) => n.trim().split(/\s+/)[0].toLowerCase())
+        .filter((n) => n.length >= 2)
+
       const [expSnap, setSnap] = await Promise.all([
         fs.collection('expenses').where('householdId', '==', householdId).where('poolType', '==', 'split').get(),
         fs.collection('settlements').where('householdId', '==', householdId).get(),
@@ -46,7 +56,7 @@ function adminDbAdapter() {
       const splitExpenses = expSnap.docs.map((d) => d.data())
       const settlements = setSnap.docs.map((d) => d.data())
       const balance = computeSettleBalance({ splitExpenses, settlements, meUid: uid, partnerUid })
-      return { householdId, partnerUid, balance }
+      return { householdId, partnerUid, balance, partnerFirstNames }
     },
   }
 }
@@ -81,15 +91,18 @@ function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory, s
         let amount = Math.abs(tx.amount)
 
         // --- Settle-up interception for partner reimbursements ---
-        // When a P2P transfer involves a partner who owes (or is owed) money, it
-        // is a reimbursement, not income/spending. We only RECORD the settlement
-        // on the receiver's inflow side (idempotent, keyed by transaction_id) so
-        // that if both partners' banks are connected we don't settle twice; the
-        // payer's outflow side is merely suppressed from the quick-log prompt.
+        // Only intercept when the transaction text names the partner specifically
+        // (first name from their profile). A Venmo from a friend, employer, or
+        // anyone else falls through to normal income/expense handling below.
         if (looksLikeP2P && typeof db.getSettleContext === 'function') {
           const ctx = await db.getSettleContext(item.uid)
           if (ctx && ctx.partnerUid) {
-            if (tx.amount < 0 && ctx.balance > 0.005) {
+            const txText = `${tx.merchant_name || ''} ${tx.name || ''}`.toLowerCase()
+            const isPartnerP2P = ctx.partnerFirstNames.length > 0 &&
+              ctx.partnerFirstNames.some((n) => txText.includes(n))
+            if (!isPartnerP2P) {
+              // Not from/to the partner — log normally (income if inflow, expense if outflow).
+            } else if (tx.amount < 0 && ctx.balance > 0.005) {
               // Partner is paying me back. Apply up to the outstanding balance.
               const settleAmount = Math.min(amount, ctx.balance)
               let created = true
