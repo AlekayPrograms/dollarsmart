@@ -218,3 +218,7 @@ input, textarea, select { font-size: 1rem; }
   from { background-position: 200% 0; }
   to   { background-position: -200% 0; }
 }
+
+/* ─── Scrollbar hiding (horizontal scroll rows) ─────────── */
+.hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
