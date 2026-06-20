@@ -6,7 +6,7 @@ import { db } from '../firebase/client.js'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { useHousehold } from '../hooks/useHousehold.js'
 import { useExpenses } from '../hooks/useExpenses.js'
-import { normalizeAmount, validateAmount, splitInHalf } from '../lib/expense.js'
+import { normalizeAmount, validateAmount } from '../lib/expense.js'
 import { addExpense } from '../lib/expenseStore.js'
 import { addRecurring } from '../lib/recurringStore.js'
 import { monthKey } from '../lib/recurring.js'
@@ -88,11 +88,8 @@ export default function LogPage() {
   }
 
   function handlePoolToggle(p) {
-    if (p === 'split' && poolType !== 'split' && validateAmount(amount)) {
-      setAmountText(String(splitInHalf(amount)))
-    } else if (p === 'personal' && poolType === 'split') {
-      setAmountText(String(amount * 2))
-    }
+    // Split records the FULL amount you paid; the ledger tracks that your
+    // partner owes their half. (No more halving the entered amount.)
     setPoolType(p)
     haptics.light()
   }
@@ -101,10 +98,12 @@ export default function LogPage() {
     if (!canSave) return
     setSaving(true)
     try {
+      const finalPool = type === 'income' ? 'personal' : poolType
       await addExpense({
         uid: user.uid, householdId, amount,
         categoryId: type === 'income' ? 'other' : categoryId,
-        type, poolType: type === 'income' ? 'personal' : poolType,
+        type, poolType: finalPool,
+        splitMode: finalPool === 'split' ? 'full' : null,
         note, merchantName,
         date: new Date(dateStr + 'T12:00:00'),
       })
@@ -112,7 +111,8 @@ export default function LogPage() {
         await addRecurring({
           uid: user.uid, householdId, amount,
           categoryId: type === 'income' ? 'other' : categoryId,
-          type, poolType: type === 'income' ? 'personal' : poolType,
+          type, poolType: finalPool,
+          splitMode: finalPool === 'split' ? 'full' : null,
           note, merchantName,
           dayOfMonth: Math.min(Math.max(Number(repeatDay) || 1, 1), 31),
           splitRatio: 0.5,
@@ -195,7 +195,7 @@ export default function LogPage() {
                   color: poolType === p ? 'var(--accent)' : 'var(--muted)',
                 }}
               >
-                {p === 'split' ? '½ Split' : 'Personal'}
+                {p === 'split' ? 'Split' : 'Personal'}
               </button>
             ))}
             {/* Date — a real native date input overlaid on the chip, so iOS/Safari
@@ -219,6 +219,12 @@ export default function LogPage() {
               />
             </div>
           </div>
+        )}
+
+        {type === 'expense' && poolType === 'split' && validateAmount(amount) && (
+          <p style={{ margin: '-4px 0 0', fontSize: 'var(--text-xs)', color: 'var(--subtle)', textAlign: 'center' }}>
+            Logs the full ${amount.toFixed(2)} — your partner owes ${(amount / 2).toFixed(2)}
+          </p>
         )}
 
         {/* Category grid — 5×2, all 10 visible */}

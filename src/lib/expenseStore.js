@@ -19,7 +19,7 @@ import { db } from '../firebase/client.js'
  */
 export async function addExpense({
   uid, householdId, amount, categoryId, type, poolType,
-  note = '', date = new Date(), splitRatio = 0.5, merchantName = '',
+  note = '', date = new Date(), splitRatio = 0.5, merchantName = '', splitMode = null,
 }) {
   const ref = await addDoc(collection(db, 'expenses'), {
     uid,
@@ -32,6 +32,7 @@ export async function addExpense({
     merchantName,
     date,
     splitRatio: poolType === 'split' ? splitRatio : null,
+    splitMode: poolType === 'split' ? (splitMode || 'full') : null,
     reactions: {},
     createdAt: serverTimestamp(),
   })

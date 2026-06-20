@@ -11,12 +11,13 @@ import { db } from '../firebase/client.js'
  */
 export async function addRecurring({
   uid, householdId, amount, categoryId, type, poolType,
-  note = '', merchantName = '', dayOfMonth, splitRatio = 0.5, lastPostedMonth = null,
+  note = '', merchantName = '', dayOfMonth, splitRatio = 0.5, lastPostedMonth = null, splitMode = null,
 }) {
   const ref = await addDoc(collection(db, 'recurringExpenses'), {
     uid, householdId, amount, categoryId, type, poolType, note, merchantName,
     dayOfMonth,
     splitRatio: poolType === 'split' ? splitRatio : null,
+    splitMode: poolType === 'split' ? (splitMode || 'full') : null,
     active: true,
     lastPostedMonth,
     createdAt: serverTimestamp(),

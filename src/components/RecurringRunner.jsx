@@ -44,6 +44,7 @@ export default function RecurringRunner() {
             merchantName: rule.merchantName,
             date,
             splitRatio: rule.splitRatio ?? 0.5,
+            splitMode: rule.poolType === 'split' ? (rule.splitMode || 'full') : null,
           })
           await markRecurringPosted(rule.id, key)
         } catch (err) {
