@@ -5,6 +5,7 @@ const { getPlaidClient } = require('../plaidClient')
 const { merchantToCategory } = require('../categoryMap')
 const { makeVerifyWebhook, safeDecodeKid } = require('../webhookVerify')
 const { makeSendTransactionAlert } = require('../notifications')
+const { computeSettleBalance, p2pMethod, roundCents } = require('../settle')
 
 const PLAID_CLIENT_ID = 'PLAID_CLIENT_ID'
 const PLAID_SECRET = 'PLAID_SECRET'
@@ -25,6 +26,27 @@ function adminDbAdapter() {
       if (q.empty) return null
       const d = q.docs[0]
       return { uid: d.id, itemId, data: d.data(), cursorPath: `plaidItems/${d.id}` }
+    },
+    // Returns this user's settle-up context ({ householdId, partnerUid, balance })
+    // or null if they're not in a two-person household. Used to recognize partner
+    // reimbursements (Venmo/Zelle) instead of treating them as income/spending.
+    async getSettleContext(uid) {
+      const userSnap = await fs.doc(`users/${uid}`).get()
+      const householdId = userSnap.exists ? userSnap.data().householdId : null
+      if (!householdId) return null
+      const hhSnap = await fs.doc(`households/${householdId}`).get()
+      if (!hhSnap.exists) return null
+      const memberUids = hhSnap.data().memberUids || []
+      const partnerUid = memberUids.find((u) => u !== uid)
+      if (!partnerUid) return null
+      const [expSnap, setSnap] = await Promise.all([
+        fs.collection('expenses').where('householdId', '==', householdId).where('poolType', '==', 'split').get(),
+        fs.collection('settlements').where('householdId', '==', householdId).get(),
+      ])
+      const splitExpenses = expSnap.docs.map((d) => d.data())
+      const settlements = setSnap.docs.map((d) => d.data())
+      const balance = computeSettleBalance({ splitExpenses, settlements, meUid: uid, partnerUid })
+      return { householdId, partnerUid, balance }
     },
   }
 }
@@ -56,6 +78,39 @@ function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory, s
         // name so an incoming one always counts as income even when Plaid's
         // category doesn't say so.
         const looksLikeP2P = /zelle|venmo|cash ?app|paypal/i.test(`${tx.merchant_name || ''} ${tx.name || ''}`)
+        let amount = Math.abs(tx.amount)
+
+        // --- Settle-up interception for partner reimbursements ---
+        // When a P2P transfer involves a partner who owes (or is owed) money, it
+        // is a reimbursement, not income/spending. We only RECORD the settlement
+        // on the receiver's inflow side (idempotent, keyed by transaction_id) so
+        // that if both partners' banks are connected we don't settle twice; the
+        // payer's outflow side is merely suppressed from the quick-log prompt.
+        if (looksLikeP2P && typeof db.getSettleContext === 'function') {
+          const ctx = await db.getSettleContext(item.uid)
+          if (ctx && ctx.partnerUid) {
+            if (tx.amount < 0 && ctx.balance > 0.005) {
+              // Partner is paying me back. Apply up to the outstanding balance.
+              const settleAmount = Math.min(amount, ctx.balance)
+              let created = true
+              try {
+                await db.doc(`settlements/auto_${tx.transaction_id}`).create({
+                  householdId: ctx.householdId, fromUid: ctx.partnerUid, toUid: item.uid,
+                  amount: roundCents(settleAmount), method: p2pMethod(tx), auto: true,
+                  date: tx.date, createdAt: new Date().toISOString(),
+                })
+              } catch { created = false }
+              if (!created) continue // already auto-settled this transaction
+              const remainder = roundCents(amount - settleAmount)
+              if (remainder < 0.01) continue // fully a reimbursement — no prompt
+              amount = remainder // log only the leftover as income below
+            } else if (tx.amount > 0 && ctx.balance < -0.005) {
+              // I'm reimbursing my partner — suppress the duplicate expense prompt.
+              continue
+            }
+          }
+        }
+
         // Plaid uses positive amounts for outflow (spending) and negative for
         // inflow (deposits, refunds, transfers). Prompt to log spending as an
         // expense, and genuine deposits (paychecks, transfers in, P2P in) as
@@ -71,7 +126,6 @@ function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory, s
           entryType = 'income'
         } else continue
 
-        const amount = Math.abs(tx.amount)
         const categoryId = entryType === 'income'
           ? 'other'
           : merchantToCategory(tx.merchant_name || tx.name, primary)

@@ -179,6 +179,70 @@ describe('makeProcessTransactionsSync', () => {
     expect(alerts).toHaveLength(0)
   })
 
+  function dbWithSettle(ctx) {
+    const db = fakeDb({ 'plaidItems/u1': { itemId: 'item-1', accessToken: 'acc', cursor: null } })
+    db.getSettleContext = async () => ctx
+    return db
+  }
+
+  it('auto-settles a partner P2P inflow that pays back what they owe', async () => {
+    const db = dbWithSettle({ householdId: 'hh1', partnerUid: 'partner', balance: 50 })
+    const { process, alerts } = makeSync(db, {
+      added: [{ transaction_id: 'tx-r', amount: -50, merchant_name: '', name: 'Zelle from PARTNER', date: '2026-06-15', pending: false,
+        personal_finance_category: { primary: 'OTHER' } }],
+    })
+
+    await process('item-1')
+
+    expect(db.writes['settlements/auto_tx-r'].data).toMatchObject({
+      householdId: 'hh1', fromUid: 'partner', toUid: 'u1', amount: 50, method: 'zelle', auto: true,
+    })
+    expect(db.writes['pendingTransactions/tx-r']).toBeUndefined() // not income
+    expect(alerts).toHaveLength(0)
+  })
+
+  it('settles up to the balance and logs the remainder as income', async () => {
+    const db = dbWithSettle({ householdId: 'hh1', partnerUid: 'partner', balance: 50 })
+    const { process, alerts } = makeSync(db, {
+      added: [{ transaction_id: 'tx-r2', amount: -80, merchant_name: '', name: 'VENMO CASHOUT', date: '2026-06-15', pending: false,
+        personal_finance_category: { primary: 'OTHER' } }],
+    })
+
+    await process('item-1')
+
+    expect(db.writes['settlements/auto_tx-r2'].data).toMatchObject({ amount: 50, method: 'venmo' })
+    expect(db.writes['pendingTransactions/tx-r2'].data).toMatchObject({ uid: 'u1', amount: 30, entryType: 'income' })
+    expect(alerts).toHaveLength(1)
+  })
+
+  it('suppresses my P2P outflow that reimburses my partner (no double prompt)', async () => {
+    const db = dbWithSettle({ householdId: 'hh1', partnerUid: 'partner', balance: -40 })
+    const { process, alerts } = makeSync(db, {
+      added: [{ transaction_id: 'tx-out', amount: 40, merchant_name: '', name: 'Venmo payment to PARTNER', date: '2026-06-15', pending: false,
+        personal_finance_category: { primary: 'GENERAL_SERVICES' } }],
+    })
+
+    await process('item-1')
+
+    expect(db.writes['pendingTransactions/tx-out']).toBeUndefined()
+    expect(db.writes['settlements/auto_tx-out']).toBeUndefined() // recorded on receiver side only
+    expect(alerts).toHaveLength(0)
+  })
+
+  it('treats a P2P inflow as income when nothing is owed', async () => {
+    const db = dbWithSettle({ householdId: 'hh1', partnerUid: 'partner', balance: 0 })
+    const { process, alerts } = makeSync(db, {
+      added: [{ transaction_id: 'tx-inc2', amount: -25, merchant_name: '', name: 'Venmo from FRIEND', date: '2026-06-15', pending: false,
+        personal_finance_category: { primary: 'OTHER' } }],
+    })
+
+    await process('item-1')
+
+    expect(db.writes['settlements/auto_tx-inc2']).toBeUndefined()
+    expect(db.writes['pendingTransactions/tx-inc2'].data).toMatchObject({ entryType: 'income', amount: 25 })
+    expect(alerts).toHaveLength(1)
+  })
+
   it('does nothing when the item is unknown', async () => {
     const db = fakeDb({})
     const process = makeProcessTransactionsSync({
