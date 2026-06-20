@@ -5,45 +5,69 @@ const { getPlaidClient } = require('../plaidClient')
 const PLAID_CLIENT_ID = 'PLAID_CLIENT_ID'
 const PLAID_SECRET = 'PLAID_SECRET'
 
-// List the connected accounts for the signed-in user, masked (no balances or
-// full numbers — just name, last digits, type/subtype).
+const mapAccount = (a) => ({
+  name: a.name || a.official_name || 'Account',
+  mask: a.mask || null,
+  type: a.type || null,
+  subtype: a.subtype || null,
+})
+
+// All of a user's connected banks: the new per-bank plaidConnections plus any
+// legacy single plaidItems/{uid} doc.
+async function listConnections(fs, uid) {
+  const conns = []
+  const cs = await fs.collection('plaidConnections').where('uid', '==', uid).get()
+  cs.forEach((d) => conns.push({ ref: d.ref, itemId: d.id, accessToken: d.data().accessToken, institutionName: d.data().institutionName || 'Bank' }))
+  const legacy = await fs.doc(`plaidItems/${uid}`).get()
+  if (legacy.exists && legacy.data().accessToken) {
+    conns.push({ ref: legacy.ref, itemId: legacy.data().itemId || `legacy:${uid}`, accessToken: legacy.data().accessToken, institutionName: 'Bank', legacy: true })
+  }
+  return conns
+}
+
+// List connected banks, each with its masked accounts.
 const getAccounts = onCall({ secrets: [PLAID_CLIENT_ID, PLAID_SECRET] }, async (request) => {
   const auth = request.auth
   if (!auth) throw new HttpsError('unauthenticated', 'Sign in required.')
   const fs = admin.firestore()
-  const snap = await fs.doc(`plaidItems/${auth.uid}`).get()
-  if (!snap.exists) return { accounts: [] }
   const plaid = getPlaidClient()
-  const res = await plaid.accountsGet({ access_token: snap.data().accessToken })
-  const accounts = (res.data.accounts || []).map((a) => ({
-    name: a.name || a.official_name || 'Account',
-    mask: a.mask || null,
-    type: a.type || null,
-    subtype: a.subtype || null,
-  }))
-  return { accounts }
+  const conns = await listConnections(fs, auth.uid)
+
+  const banks = []
+  for (const c of conns) {
+    try {
+      const r = await plaid.accountsGet({ access_token: c.accessToken })
+      banks.push({ itemId: c.itemId, institutionName: c.institutionName, accounts: (r.data.accounts || []).map(mapAccount) })
+    } catch (e) {
+      banks.push({ itemId: c.itemId, institutionName: c.institutionName, accounts: [], error: true })
+    }
+  }
+  return { banks }
 })
 
-// Disconnect the user's bank: remove the Plaid item, delete the stored token,
-// and clear their bank status. (Plaid trial: removing does not free a slot.)
+// Disconnect ONE bank by itemId (removes the Plaid item + its stored token).
 const disconnectBank = onCall({ secrets: [PLAID_CLIENT_ID, PLAID_SECRET] }, async (request) => {
   const auth = request.auth
   if (!auth) throw new HttpsError('unauthenticated', 'Sign in required.')
+  const itemId = request.data && request.data.itemId
   const fs = admin.firestore()
-  const ref = fs.doc(`plaidItems/${auth.uid}`)
-  const snap = await ref.get()
-  if (snap.exists) {
+  const plaid = getPlaidClient()
+
+  const conns = await listConnections(fs, auth.uid)
+  // If an itemId is given, target it; otherwise (legacy single-bank) take the first.
+  const target = itemId ? conns.find((c) => c.itemId === itemId) : conns[0]
+  if (target) {
     try {
-      const plaid = getPlaidClient()
-      await plaid.itemRemove({ access_token: snap.data().accessToken })
-    } catch (err) {
-      // Even if Plaid's removal fails, drop our stored token so the app stops syncing.
-      console.error('itemRemove failed (continuing):', err.message || err)
+      await plaid.itemRemove({ access_token: target.accessToken })
+    } catch (e) {
+      console.error('itemRemove failed (continuing):', e.message || e)
     }
-    await ref.delete()
+    await target.ref.delete()
   }
-  await fs.doc(`users/${auth.uid}`).set({ bankStatus: null }, { merge: true })
-  return { ok: true }
+
+  const remaining = (await listConnections(fs, auth.uid)).length
+  await fs.doc(`users/${auth.uid}`).set({ bankStatus: remaining > 0 ? 'connected' : null }, { merge: true })
+  return { ok: true, remaining }
 })
 
 module.exports = { getAccounts, disconnectBank }

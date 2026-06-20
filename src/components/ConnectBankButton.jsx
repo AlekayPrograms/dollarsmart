@@ -1,6 +1,6 @@
 import { usePlaidConnect } from '../hooks/usePlaidConnect.js'
 
-export default function ConnectBankButton({ label = 'Connect bank account' }) {
+export default function ConnectBankButton({ label = 'Add a bank or card' }) {
   const { start, loading, error } = usePlaidConnect()
   return (
     <div style={{ width: '100%', maxWidth: 420 }}>

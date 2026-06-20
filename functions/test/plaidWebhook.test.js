@@ -50,7 +50,7 @@ describe('makeProcessTransactionsSync', () => {
       uid: 'u1', amount: 24.5, merchantName: 'Chipotle', categoryId: 'food',
       date: '2026-06-13', status: 'pending',
     })
-    expect(db.writes['plaidItems/u1'].data.cursor).toBe('cursor-2')
+    expect(db.writes['plaidConnections/item-1'].data.cursor).toBe('cursor-2')
     expect(alerts).toEqual([{ uid: 'u1', pendingId: 'tx-1', categoryId: 'food' }])
   })
 

@@ -1,66 +1,77 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { getAccounts, disconnectBank } from '../lib/functions.js'
 
 const typeEmoji = (a) => (a.type === 'credit' ? '💳' : a.type === 'depository' ? '🏦' : '💼')
 const prettyType = (a) => (a.subtype || a.type || 'account').replace(/_/g, ' ')
 
 /**
- * Lists the user's connected bank accounts (masked) and offers a disconnect
- * action. Renders nothing when no bank is connected (the Connect button covers
- * that case).
+ * Lists the user's connected banks (each masked), grouped by institution, with
+ * a per-bank disconnect. Renders nothing when no bank is connected (the Connect
+ * button covers that case).
  */
 export default function BankAccounts() {
-  const [accounts, setAccounts] = useState(null) // null = loading
-  const [busy, setBusy] = useState(false)
+  const [banks, setBanks] = useState(null) // null = loading
+  const [busy, setBusy] = useState(null) // itemId being disconnected
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    let active = true
+  const load = useCallback(() => {
     getAccounts()
-      .then((res) => { if (active) setAccounts(res.data?.accounts ?? []) })
-      .catch(() => { if (active) setAccounts([]) })
-    return () => { active = false }
+      .then((res) => setBanks(res.data?.banks ?? []))
+      .catch(() => setBanks([]))
   }, [])
+  useEffect(() => { load() }, [load])
 
-  async function handleDisconnect() {
-    if (!window.confirm("Disconnect your bank? Transactions will stop being detected. (On the Plaid trial this doesn't free a connection slot.)")) return
-    setBusy(true)
+  async function handleDisconnect(bank) {
+    if (!window.confirm(`Disconnect ${bank.institutionName}? Its transactions will stop being detected.`)) return
+    setBusy(bank.itemId)
     setError('')
     try {
-      await disconnectBank()
-      setAccounts([])
+      await disconnectBank({ itemId: bank.itemId })
+      setBanks((bs) => (bs || []).filter((b) => b.itemId !== bank.itemId))
     } catch (err) {
       setError('Could not disconnect — please try again.')
     } finally {
-      setBusy(false)
+      setBusy(null)
     }
   }
 
-  if (accounts === null) return <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--subtle)' }}>Loading accounts…</p>
-  if (accounts.length === 0) return null
+  if (banks === null) return <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--subtle)' }}>Loading accounts…</p>
+  if (banks.length === 0) return null
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-      {accounts.map((a, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <span style={{ fontSize: '1.1rem' }}>{typeEmoji(a)}</span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '0.9rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {a.name}{a.mask ? <span style={{ color: 'var(--muted)' }}> ••{a.mask}</span> : null}
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--subtle)', textTransform: 'capitalize' }}>{prettyType(a)}</div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+      {banks.map((bank) => (
+        <div key={bank.itemId} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              {bank.institutionName}
+            </span>
+            <button
+              onClick={() => handleDisconnect(bank)}
+              disabled={busy === bank.itemId}
+              style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}
+            >
+              {busy === bank.itemId ? 'Disconnecting…' : 'Disconnect'}
+            </button>
           </div>
+
+          {bank.accounts.length === 0 ? (
+            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--subtle)' }}>
+              {bank.error ? 'Needs reconnect' : 'No accounts'}
+            </p>
+          ) : bank.accounts.map((a, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ fontSize: '1.1rem' }}>{typeEmoji(a)}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {a.name}{a.mask ? <span style={{ color: 'var(--muted)' }}> ••{a.mask}</span> : null}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--subtle)', textTransform: 'capitalize' }}>{prettyType(a)}</div>
+              </div>
+            </div>
+          ))}
         </div>
       ))}
-
-      <button
-        className="btn btn-secondary"
-        style={{ width: '100%', justifyContent: 'flex-start', background: 'none', border: 'none', padding: 0, fontWeight: 500, color: 'var(--danger)', fontSize: '0.9rem' }}
-        onClick={handleDisconnect}
-        disabled={busy}
-      >
-        {busy ? 'Disconnecting…' : 'Disconnect bank'}
-      </button>
       {error && <p style={{ margin: 0, color: 'var(--danger)', fontSize: '0.8rem' }}>{error}</p>}
     </div>
   )

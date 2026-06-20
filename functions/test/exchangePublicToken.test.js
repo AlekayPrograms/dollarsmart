@@ -34,11 +34,12 @@ describe('makeExchangePublicToken (handler core)', () => {
     const result = await handler({ auth: { uid: 'u1' }, data: { publicToken: 'public-sandbox' } })
 
     expect(result).toEqual({ ok: true })
-    // access token goes to the server-only collection, NOT returned to client
-    expect(db.writes['plaidItems/u1'].data.accessToken).toBe('access-sandbox-xyz')
-    expect(db.writes['plaidItems/u1'].data.itemId).toBe('item-1')
-    expect(db.writes['plaidItems/u1'].data.cursor).toBe(null)
-    expect(db.writes['plaidItems/u1'].data.status).toBe('connected')
+    // access token goes to a per-bank server-only doc keyed by item_id
+    expect(db.writes['plaidConnections/item-1'].data.accessToken).toBe('access-sandbox-xyz')
+    expect(db.writes['plaidConnections/item-1'].data.itemId).toBe('item-1')
+    expect(db.writes['plaidConnections/item-1'].data.uid).toBe('u1')
+    expect(db.writes['plaidConnections/item-1'].data.cursor).toBe(null)
+    expect(db.writes['plaidConnections/item-1'].data.status).toBe('connected')
     // client-readable summary on the user doc
     expect(db.writes['users/u1'].data.bankStatus).toBe('connected')
     expect(db.writes['users/u1'].opts).toEqual({ merge: true })

@@ -15,10 +15,16 @@ function adminDbAdapter() {
   return {
     doc: (path) => fs.doc(path),
     async findItemByItemId(itemId) {
-      const snap = await fs.collection('plaidItems').where('itemId', '==', itemId).limit(1).get()
-      if (snap.empty) return null
-      const d = snap.docs[0]
-      return { uid: d.id, data: d.data() }
+      // New model: one doc per connected bank, keyed by Plaid item_id.
+      const snap = await fs.doc(`plaidConnections/${itemId}`).get()
+      if (snap.exists) {
+        return { uid: snap.data().uid, itemId, data: snap.data(), cursorPath: `plaidConnections/${itemId}` }
+      }
+      // Legacy fallback: the old one-bank-per-user collection.
+      const q = await fs.collection('plaidItems').where('itemId', '==', itemId).limit(1).get()
+      if (q.empty) return null
+      const d = q.docs[0]
+      return { uid: d.id, itemId, data: d.data(), cursorPath: `plaidItems/${d.id}` }
     },
   }
 }
@@ -101,7 +107,7 @@ function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory, s
       hasMore = more
       // Persist the cursor after each page so a mid-pagination failure resumes
       // forward on Plaid's retry instead of re-processing earlier pages.
-      await db.doc(`plaidItems/${item.uid}`).set({ cursor: cursor || null }, { merge: true })
+      await db.doc(item.cursorPath || `plaidConnections/${itemId}`).set({ cursor: cursor || null }, { merge: true })
     }
   }
 }
@@ -110,7 +116,7 @@ function makeProcessTransactionsSync({ db, getPlaidClient, merchantToCategory, s
 async function markReauthRequired(db, itemId) {
   const item = await db.findItemByItemId(itemId)
   if (!item) return
-  await db.doc(`plaidItems/${item.uid}`).set({ status: 'reauth_required' }, { merge: true })
+  await db.doc(item.cursorPath || `plaidConnections/${itemId}`).set({ status: 'reauth_required' }, { merge: true })
   await db.doc(`users/${item.uid}`).set({ bankStatus: 'reauth_required' }, { merge: true })
 }
 

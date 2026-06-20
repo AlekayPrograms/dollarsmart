@@ -12,16 +12,21 @@ function makeExchangePublicToken({ getPlaidClient, db }) {
     const publicToken = data?.publicToken
     if (!publicToken) throw new HttpsError('invalid-argument', 'publicToken is required.')
 
+    const institutionName = (data && data.institutionName) || 'Bank'
     const plaid = getPlaidClient()
     const res = await plaid.itemPublicTokenExchange({ public_token: publicToken })
     const { access_token: accessToken, item_id: itemId } = res.data
 
-    await db.doc(`plaidItems/${auth.uid}`).set({
+    // One doc per connected bank (keyed by Plaid item_id) so a user can connect
+    // several banks/cards. Server-only collection (see firestore.rules).
+    await db.doc(`plaidConnections/${itemId}`).set({
+      uid: auth.uid,
       accessToken,
       itemId,
       cursor: null,
       status: 'connected',
-      updatedAt: new Date().toISOString(),
+      institutionName,
+      createdAt: new Date().toISOString(),
     })
     await db.doc(`users/${auth.uid}`).set({ bankStatus: 'connected' }, { merge: true })
 

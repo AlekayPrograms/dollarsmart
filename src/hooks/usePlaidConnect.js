@@ -15,10 +15,10 @@ export function usePlaidConnect() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const onSuccess = useCallback(async (publicToken) => {
+  const onSuccess = useCallback(async (publicToken, metadata) => {
     setLoading(true)
     try {
-      await exchangePublicToken({ publicToken })
+      await exchangePublicToken({ publicToken, institutionName: metadata?.institution?.name })
     } catch (e) {
       setError('Could not finish connecting your bank.')
     } finally {
