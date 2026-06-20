@@ -11,10 +11,8 @@ const { weeklyInsight } = require('./src/handlers/weeklyInsight')
 const { monthlyRecap } = require('./src/handlers/monthlyRecap')
 const { getAccounts, disconnectBank } = require('./src/handlers/plaidAccount')
 const { kickMember } = require('./src/handlers/kickMember')
-const { announceUpdate } = require('./src/handlers/announceUpdate')
 
 module.exports = {
   createLinkToken, exchangePublicToken, plaidWebhook, expenseTrigger, expenseRemovalVotes,
   scheduledNudge, weeklyInsight, monthlyRecap, getAccounts, disconnectBank, kickMember,
-  announceUpdate,
 }
