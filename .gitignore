@@ -22,6 +22,9 @@ ui-debug.log
 # Superpowers brainstorm sessions
 .superpowers/
 
+# Temp commit message file
+.commitmsg.tmp
+
 # Editor / OS
 .vscode/
 .idea/
