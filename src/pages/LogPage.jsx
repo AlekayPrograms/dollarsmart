@@ -8,6 +8,7 @@ import { useHousehold } from '../hooks/useHousehold.js'
 import { useExpenses } from '../hooks/useExpenses.js'
 import { normalizeAmount, validateAmount } from '../lib/expense.js'
 import { addExpense } from '../lib/expenseStore.js'
+import { addSettlement } from '../lib/settleStore.js'
 import { addRecurring } from '../lib/recurringStore.js'
 import { monthKey } from '../lib/recurring.js'
 import { predictCategory } from '../lib/categoryPredictor.js'
@@ -25,7 +26,7 @@ function formatDateChip(dateStr) {
 
 export default function LogPage() {
   const { user } = useAuth()
-  const { householdId } = useHousehold()
+  const { householdId, household } = useHousehold()
   const { expenses } = useExpenses()
   const navigate = useNavigate()
   const location = useLocation()
@@ -55,6 +56,17 @@ export default function LogPage() {
   const [saving, setSaving] = useState(false)
   const dateInputRef = useRef(null)
 
+  // Partner info for P2P "To:" prompt
+  const partnerUid = household?.memberUids?.find((u) => u !== user?.uid) ?? null
+  const partnerProfile = household?.members?.[partnerUid] || {}
+  const partnerName = partnerProfile.nickname || partnerProfile.name?.split(' ')[0] || 'Partner'
+
+  // Whether this looks like a Venmo/Zelle/P2P transaction based on merchant name
+  const isP2P = type === 'expense' && /venmo|zelle|cash ?app|paypal/i.test(merchantName)
+
+  // Who the P2P is being sent to: 'partner' auto-suggested, 'other' = someone else
+  const [venmoRecipient, setVenmoRecipient] = useState('partner')
+
   // Auto-suggest category from merchant history
   const suggestedCategoryId = merchantName ? predictCategory(expenses, merchantName) : null
   const [categoryId, setCategoryId] = useState(
@@ -67,7 +79,9 @@ export default function LogPage() {
   }, [suggestedCategoryId])
 
   const amount = normalizeAmount(amountText)
-  const canSave = validateAmount(amount) && (type === 'income' || categoryId) && !saving
+  const isPartnerPayment = isP2P && venmoRecipient === 'partner' && !!partnerUid
+  const canSave = validateAmount(amount) && !saving &&
+    (type === 'income' || isPartnerPayment || !!categoryId)
 
   function handleKey(k) {
     if (k === '⌫') { setAmountText((prev) => prev.slice(0, -1)); return }
@@ -98,6 +112,25 @@ export default function LogPage() {
     if (!canSave) return
     setSaving(true)
     try {
+      // P2P payment to the partner → record as a settlement, not an expense
+      if (isPartnerPayment) {
+        const method = /venmo/i.test(merchantName) ? 'venmo'
+          : /zelle/i.test(merchantName) ? 'zelle'
+          : /cash ?app/i.test(merchantName) ? 'cashapp'
+          : /paypal/i.test(merchantName) ? 'paypal' : 'transfer'
+        await addSettlement({
+          householdId, fromUid: user.uid, toUid: partnerUid,
+          amount, method, note,
+          date: new Date(dateStr + 'T12:00:00'),
+        })
+        if (prefill.pendingId) {
+          await deleteDoc(doc(db, 'pendingTransactions', prefill.pendingId)).catch(() => {})
+        }
+        haptics.success()
+        navigate('/', { replace: true })
+        return
+      }
+
       const finalPool = type === 'income' ? 'personal' : poolType
       await addExpense({
         uid: user.uid, householdId, amount,
@@ -227,8 +260,36 @@ export default function LogPage() {
           </p>
         )}
 
+        {/* P2P "To:" prompt — shown for Venmo/Zelle/etc. outflows */}
+        {isP2P && partnerUid && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--subtle)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', whiteSpace: 'nowrap' }}>
+              To:
+            </span>
+            {[{ value: 'partner', label: partnerName }, { value: 'other', label: 'Someone else' }].map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => { setVenmoRecipient(value); haptics.light() }}
+                style={{
+                  padding: '5px 13px', borderRadius: 20, border: '1px solid var(--border)',
+                  cursor: 'pointer', fontSize: 'var(--text-sm)', fontWeight: 600,
+                  background: venmoRecipient === value ? 'rgba(16,185,129,.15)' : 'var(--surface)',
+                  color: venmoRecipient === value ? 'var(--accent)' : 'var(--muted)',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+            {venmoRecipient === 'partner' && (
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 600 }}>
+                → settles up
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Category grid — 5×2, all 10 visible */}
-        {type === 'expense' && (
+        {type === 'expense' && !isPartnerPayment && (
           <div>
             <p style={{ margin: '0 0 7px', fontSize: 'var(--text-xs)', color: 'var(--subtle)', textTransform: 'uppercase', letterSpacing: '.08em', fontWeight: 700 }}>
               Category
