@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { AnimatePresence, MotionConfig } from 'framer-motion'
+import { MotionConfig } from 'framer-motion'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import AuthGate from './components/AuthGate.jsx'
 import HouseholdGate from './components/HouseholdGate.jsx'
@@ -16,7 +16,9 @@ const ExpensesPage = lazy(() => import('./pages/ExpensesPage.jsx'))
 const InsightsPage = lazy(() => import('./pages/InsightsPage.jsx'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'))
 
-const NO_NAV = ['/login', '/onboarding']
+// /log is a full-screen focused screen with its own Cancel/Save, so the bottom
+// nav must not render over it (it was covering the Save button).
+const NO_NAV = ['/login', '/onboarding', '/log']
 
 function PageFallback() {
   return (
@@ -33,18 +35,16 @@ function App() {
   return (
     <MotionConfig reducedMotion="user">
       <Suspense fallback={<PageFallback />}>
-        <AnimatePresence mode="wait" initial={false}>
-          <Routes location={location} key={location.pathname}>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/onboarding" element={<AuthGate><OnboardingPage /></AuthGate>} />
-            <Route path="/log" element={<AuthGate><HouseholdGate><LogPage /></HouseholdGate></AuthGate>} />
-            <Route path="/expenses" element={<AuthGate><HouseholdGate><ExpensesPage /></HouseholdGate></AuthGate>} />
-            <Route path="/insights" element={<AuthGate><HouseholdGate><InsightsPage /></HouseholdGate></AuthGate>} />
-            <Route path="/settings" element={<AuthGate><HouseholdGate><SettingsPage /></HouseholdGate></AuthGate>} />
-            <Route path="/*" element={<AuthGate><HouseholdGate><HomePage /></HouseholdGate></AuthGate>} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AnimatePresence>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/onboarding" element={<AuthGate><OnboardingPage /></AuthGate>} />
+          <Route path="/log" element={<AuthGate><HouseholdGate><LogPage /></HouseholdGate></AuthGate>} />
+          <Route path="/expenses" element={<AuthGate><HouseholdGate><ExpensesPage /></HouseholdGate></AuthGate>} />
+          <Route path="/insights" element={<AuthGate><HouseholdGate><InsightsPage /></HouseholdGate></AuthGate>} />
+          <Route path="/settings" element={<AuthGate><HouseholdGate><SettingsPage /></HouseholdGate></AuthGate>} />
+          <Route path="/*" element={<AuthGate><HouseholdGate><HomePage /></HouseholdGate></AuthGate>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </Suspense>
       {showNav && <BottomNav />}
       <RecurringRunner />

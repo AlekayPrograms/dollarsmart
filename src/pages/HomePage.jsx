@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import PageWrapper from '../components/PageWrapper.jsx'
 import { useExpenses } from '../hooks/useExpenses.js'
 import { useMonthlyTargets } from '../hooks/useMonthlyTargets.js'
@@ -8,6 +8,13 @@ import { sumByCategory, budgetProgress, leftToSpend } from '../lib/budget.js'
 import { CATEGORIES } from '../lib/categories.js'
 import { getQuickLogChips } from '../lib/quickLog.js'
 import { haptics } from '../lib/haptics.js'
+
+const DISMISSED_CHIPS_KEY = 'ds_dismissed_chips'
+
+function loadDismissedChips() {
+  try { return new Set(JSON.parse(localStorage.getItem(DISMISSED_CHIPS_KEY) || '[]')) }
+  catch { return new Set() }
+}
 import ProgressBar from '../components/ProgressBar.jsx'
 import PendingTransactionBanner from '../components/PendingTransactionBanner.jsx'
 import ReconnectBanner from '../components/ReconnectBanner.jsx'
@@ -46,7 +53,19 @@ export default function HomePage() {
   const onPace = dailyPace !== null && expectedDailyRate !== null && dailyPace >= expectedDailyRate * 0.85
 
   const navigate = useNavigate()
-  const chips = getQuickLogChips(expenses, now)
+  const [dismissedChips, setDismissedChips] = useState(loadDismissedChips)
+  const chips = getQuickLogChips(expenses, now, 3, dismissedChips)
+
+  function dismissChip(key) {
+    haptics.light()
+    setDismissedChips((prev) => {
+      const next = new Set(prev)
+      next.add(key)
+      try { localStorage.setItem(DISMISSED_CHIPS_KEY, JSON.stringify([...next])) } catch { /* ignore */ }
+      return next
+    })
+  }
+
   const [pullProgress, setPullProgress] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const startYRef = useRef(null)
@@ -163,35 +182,62 @@ export default function HomePage() {
           </div>
         )}
 
-        {chips.length >= 3 && (
+        {chips.length >= 1 && (
           <div style={{ width: '100%', maxWidth: 440 }}>
             <p style={{ margin: '0 0 0.5rem', fontSize: 'var(--text-xs)', color: 'var(--subtle)', textTransform: 'uppercase', letterSpacing: '.08em', fontWeight: 700 }}>
               Quick log
             </p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <AnimatePresence initial={false}>
               {chips.map((chip) => {
                 const cat = CATEGORIES.find((c) => c.id === chip.categoryId)
-                if (!cat) return null
                 return (
-                  <motion.button
-                    key={`${chip.categoryId}:${chip.amount}`}
-                    whileTap={{ scale: 0.94 }}
-                    onClick={() => {
-                      haptics.light()
-                      navigate('/log', { state: { prefillAmount: chip.amount, prefillCategoryId: chip.categoryId } })
-                    }}
+                  <motion.div
+                    key={chip.key}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
                     style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      display: 'inline-flex', alignItems: 'center',
                       background: 'var(--surface)', border: '1px solid var(--border)',
-                      borderRadius: 'var(--radius-md)', padding: '8px 12px',
-                      fontSize: 'var(--text-sm)', color: 'var(--text)',
-                      cursor: 'pointer', fontWeight: 500,
+                      borderRadius: 'var(--radius-md)', overflow: 'hidden',
                     }}
                   >
-                    {cat.emoji} {cat.label} <strong>${chip.amount}</strong>
-                  </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.94 }}
+                      onClick={() => {
+                        haptics.light()
+                        navigate('/log', { state: { prefillAmount: chip.amount, prefillCategoryId: chip.categoryId, prefillMerchantName: chip.merchantName } })
+                      }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        background: 'none', border: 'none',
+                        padding: '8px 4px 8px 12px',
+                        fontSize: 'var(--text-sm)', color: 'var(--text)',
+                        cursor: 'pointer', fontWeight: 500,
+                      }}
+                    >
+                      <span>{cat?.emoji ?? '💸'}</span>
+                      <span style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chip.merchantName}</span>
+                      <strong>${chip.amount}</strong>
+                    </motion.button>
+                    <button
+                      onClick={() => dismissChip(chip.key)}
+                      aria-label={`Dismiss ${chip.merchantName}`}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: 'var(--subtle)', fontSize: '1rem', lineHeight: 1,
+                        padding: '8px 10px 8px 6px',
+                      }}
+                    >
+                      ×
+                    </button>
+                  </motion.div>
                 )
               })}
+              </AnimatePresence>
             </div>
           </div>
         )}

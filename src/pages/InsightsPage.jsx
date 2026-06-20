@@ -171,49 +171,36 @@ export default function InsightsPage() {
           }}
           style={{ touchAction: 'pan-y' }}
         >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={anchorKey}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={spring.smooth}
-              style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', height: 140 }}
-            >
-              {months.map((m) => {
-                const h = Math.round((m.total / maxMonth) * 100)
-                const isSelected = m.key === selectedKey
-                return (
-                  <button
-                    key={m.key}
-                    onClick={() => setSelectedKey(m.key)}
-                    aria-pressed={isSelected}
-                    style={{
-                      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem',
-                      height: '100%', justifyContent: 'flex-end', background: 'none', border: 'none',
-                      padding: 0, cursor: 'pointer',
-                    }}
-                  >
-                    <span style={{ fontSize: '0.62rem', color: 'var(--subtle)', fontVariantNumeric: 'tabular-nums' }}>
-                      {m.total > 0 ? `$${m.total.toFixed(0)}` : ''}
-                    </span>
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{
-                        height: `${Math.max(h, m.total > 0 ? 4 : 1)}%`,
-                        background: isSelected ? 'var(--accent)' : 'rgba(255,255,255,0.18)',
-                      }}
-                      transition={{ ...spring.gentle, delay: months.indexOf(m) * 0.04 }}
-                      style={{ width: '100%', maxWidth: 34, borderRadius: '6px 6px 2px 2px' }}
-                    />
-                    <span style={{ fontSize: '0.65rem', fontWeight: isSelected ? 700 : 500, color: isSelected ? 'var(--text)' : 'var(--muted)' }}>
-                      {m.label}
-                    </span>
-                  </button>
-                )
-              })}
-            </motion.div>
-          </AnimatePresence>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', height: 140 }}>
+            {months.map((m) => {
+              const h = Math.round((m.total / maxMonth) * 100)
+              const isSelected = m.key === selectedKey
+              return (
+                <button
+                  key={m.key}
+                  onClick={() => setSelectedKey(m.key)}
+                  aria-pressed={isSelected}
+                  style={{
+                    flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem',
+                    height: '100%', justifyContent: 'flex-end', background: 'none', border: 'none',
+                    padding: 0, cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ fontSize: '0.62rem', color: 'var(--subtle)', fontVariantNumeric: 'tabular-nums' }}>
+                    {m.total > 0 ? `$${m.total.toFixed(0)}` : ''}
+                  </span>
+                  <div style={{
+                    width: '100%', maxWidth: 34, borderRadius: '6px 6px 2px 2px',
+                    height: `${Math.max(h, m.total > 0 ? 4 : 1)}%`,
+                    background: isSelected ? 'var(--accent)' : 'rgba(255,255,255,0.18)',
+                  }} />
+                  <span style={{ fontSize: '0.65rem', fontWeight: isSelected ? 700 : 500, color: isSelected ? 'var(--text)' : 'var(--muted)' }}>
+                    {m.label}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
           <p style={{ textAlign: 'center', fontSize: 'var(--text-xs)', color: 'var(--subtle)', margin: '0.4rem 0 0', userSelect: 'none' }}>
             ← swipe to change month →
           </p>

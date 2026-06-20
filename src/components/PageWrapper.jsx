@@ -1,18 +1,9 @@
 // src/components/PageWrapper.jsx
-import { motion } from 'framer-motion'
-import { fade, spring } from '../lib/motion.js'
-
+// Plain wrapper — tab/page changes are instant (no fade transition).
 export default function PageWrapper({ children, className = 'page-root', style }) {
   return (
-    <motion.div
-      className={className}
-      style={style}
-      initial={fade.initial}
-      animate={fade.animate}
-      exit={fade.exit}
-      transition={spring.smooth}
-    >
+    <div className={className} style={style}>
       {children}
-    </motion.div>
+    </div>
   )
 }

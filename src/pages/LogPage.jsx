@@ -48,7 +48,7 @@ export default function LogPage() {
   const [poolType, setPoolType] = useState(prefill.prefillSplit ? 'split' : 'personal')
   const [dateStr, setDateStr] = useState(prefill.prefillDate ?? new Date().toISOString().slice(0, 10))
   const [note, setNote] = useState('')
-  const [merchantName] = useState(prefill.prefillMerchantName ?? '')
+  const [merchantName, setMerchantName] = useState(prefill.prefillMerchantName ?? '')
   const [repeatMonthly, setRepeatMonthly] = useState(false)
   const [repeatDay, setRepeatDay] = useState(() => Number(dateStr.slice(8, 10)) || new Date().getDate())
   const [showDetails, setShowDetails] = useState(false)
@@ -198,26 +198,26 @@ export default function LogPage() {
                 {p === 'split' ? '½ Split' : 'Personal'}
               </button>
             ))}
-            {/* Date chip — always visible */}
-            <button
-              onClick={() => dateInputRef.current?.showPicker?.() ?? dateInputRef.current?.click()}
-              style={{
+            {/* Date — a real native date input overlaid on the chip, so iOS/Safari
+                opens its picker on tap (programmatic showPicker()/click() doesn't
+                work on iOS PWAs). */}
+            <div style={{ position: 'relative', display: 'inline-flex' }}>
+              <div style={{
                 display: 'flex', alignItems: 'center', gap: 5,
                 background: 'var(--surface)', border: '1px solid rgba(255,255,255,.1)',
                 borderRadius: 10, padding: '7px 11px', fontSize: 'var(--text-sm)', fontWeight: 600,
-                color: 'var(--muted)', whiteSpace: 'nowrap', cursor: 'pointer',
-              }}
-            >
-              📅 {formatDateChip(dateStr)}
-            </button>
-            {/* Hidden native date input */}
-            <input
-              ref={dateInputRef}
-              type="date"
-              value={dateStr}
-              onChange={(e) => setDateStr(e.target.value)}
-              style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
-            />
+                color: 'var(--muted)', whiteSpace: 'nowrap',
+              }}>
+                📅 {formatDateChip(dateStr)}
+              </div>
+              <input
+                type="date"
+                value={dateStr}
+                onChange={(e) => setDateStr(e.target.value)}
+                aria-label="Date"
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, border: 'none', cursor: 'pointer' }}
+              />
+            </div>
           </div>
         )}
 
@@ -243,7 +243,7 @@ export default function LogPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 'var(--text-sm)', color: 'var(--muted)', fontWeight: 500 }}>
             <span>📋</span>
             <span>Add details</span>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--subtle)' }}>note · repeat monthly</span>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--subtle)' }}>company · note · repeat</span>
           </div>
           <span style={{ fontSize: 12, color: 'var(--subtle)', transform: showDetails ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }}>›</span>
         </button>
@@ -258,6 +258,13 @@ export default function LogPage() {
               style={{ overflow: 'hidden' }}
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <input
+                  type="text"
+                  value={merchantName}
+                  onChange={(e) => setMerchantName(e.target.value)}
+                  placeholder="Company / brand (optional)"
+                  style={fieldStyle}
+                />
                 <input
                   type="text"
                   value={note}
