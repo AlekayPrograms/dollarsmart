@@ -10,6 +10,7 @@ import ExpenseCard from '../components/ExpenseCard.jsx'
 import FilterBar from '../components/FilterBar.jsx'
 import UndoToast from '../components/UndoToast.jsx'
 import EditExpenseModal from '../components/EditExpenseModal.jsx'
+import SettleUpCard from '../components/SettleUpCard.jsx'
 import Skeleton from '../components/ui/Skeleton.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import { haptics } from '../lib/haptics.js'
@@ -113,6 +114,8 @@ export default function ExpensesPage() {
           {selectMode ? 'Cancel' : 'Select'}
         </button>
       </div>
+
+      <SettleUpCard />
 
       <FilterBar filters={filters} onChange={setFilters} years={years} />
 

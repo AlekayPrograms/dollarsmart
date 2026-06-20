@@ -71,6 +71,19 @@ service cloud.firestore {
         && isHouseholdMember(request.resource.data.householdId);
     }
 
+    // settlements/{id}: a household-shared ledger of reimbursements between the
+    // two partners (manual "Settle up" or auto-detected Venmo/Zelle). Members
+    // can read all of their household's settlements; a member may create one
+    // they're party to. The server (Admin SDK) creates auto-settlements.
+    match /settlements/{id} {
+      allow read: if isHouseholdMember(resource.data.householdId);
+      allow create: if isHouseholdMember(request.resource.data.householdId)
+        && (request.resource.data.fromUid == request.auth.uid
+            || request.resource.data.toUid == request.auth.uid);
+      allow delete: if isHouseholdMember(resource.data.householdId);
+      allow update: if false;
+    }
+
     // inviteCodes/{code}: readable by any authenticated user (needed to look up
     // a household by code during join). Writable by any authenticated user (the
     // creator writes it on household creation).
