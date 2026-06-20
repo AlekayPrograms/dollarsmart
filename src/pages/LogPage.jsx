@@ -62,10 +62,14 @@ export default function LogPage() {
   const partnerName = partnerProfile.nickname || partnerProfile.name?.split(' ')[0] || 'Partner'
 
   // Whether this looks like a Venmo/Zelle/P2P transaction based on merchant name
-  const isP2P = type === 'expense' && /venmo|zelle|cash ?app|paypal/i.test(merchantName)
+  const isP2P = /venmo|zelle|cash ?app|paypal/i.test(merchantName)
+  const isP2PExpense = isP2P && type === 'expense'
+  const isP2PIncome  = isP2P && type === 'income'
 
-  // Who the P2P is being sent to: 'partner' auto-suggested, 'other' = someone else
+  // Outbound P2P: who you're sending to ('partner' auto-suggested, 'other' = someone else)
   const [venmoRecipient, setVenmoRecipient] = useState('partner')
+  // Inbound P2P: who sent it ('partner' auto-suggested, 'other' = someone else)
+  const [venmoSender, setVenmoSender] = useState('partner')
 
   // Auto-suggest category from merchant history
   const suggestedCategoryId = merchantName ? predictCategory(expenses, merchantName) : null
@@ -79,7 +83,8 @@ export default function LogPage() {
   }, [suggestedCategoryId])
 
   const amount = normalizeAmount(amountText)
-  const isPartnerPayment = isP2P && venmoRecipient === 'partner' && !!partnerUid
+  const isPartnerPayment  = isP2PExpense && venmoRecipient === 'partner' && !!partnerUid
+  const isPartnerReceipt  = isP2PIncome  && venmoSender    === 'partner' && !!partnerUid
   const canSave = validateAmount(amount) && !saving &&
     (type === 'income' || isPartnerPayment || !!categoryId)
 
@@ -112,6 +117,25 @@ export default function LogPage() {
     if (!canSave) return
     setSaving(true)
     try {
+      // P2P received from the partner → record as a settlement, not income
+      if (isPartnerReceipt) {
+        const method = /venmo/i.test(merchantName) ? 'venmo'
+          : /zelle/i.test(merchantName) ? 'zelle'
+          : /cash ?app/i.test(merchantName) ? 'cashapp'
+          : /paypal/i.test(merchantName) ? 'paypal' : 'transfer'
+        await addSettlement({
+          householdId, fromUid: partnerUid, toUid: user.uid,
+          amount, method, note,
+          date: new Date(dateStr + 'T12:00:00'),
+        })
+        if (prefill.pendingId) {
+          await deleteDoc(doc(db, 'pendingTransactions', prefill.pendingId)).catch(() => {})
+        }
+        haptics.success()
+        navigate('/', { replace: true })
+        return
+      }
+
       // P2P payment to the partner → record as a settlement, not an expense
       if (isPartnerPayment) {
         const method = /venmo/i.test(merchantName) ? 'venmo'
@@ -281,6 +305,34 @@ export default function LogPage() {
               </button>
             ))}
             {venmoRecipient === 'partner' && (
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 600 }}>
+                → settles up
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* P2P "From:" prompt — shown for Venmo/Zelle/etc. income */}
+        {isP2PIncome && partnerUid && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--subtle)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', whiteSpace: 'nowrap' }}>
+              From:
+            </span>
+            {[{ value: 'partner', label: partnerName }, { value: 'other', label: 'Someone else' }].map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => { setVenmoSender(value); haptics.light() }}
+                style={{
+                  padding: '5px 13px', borderRadius: 20, border: '1px solid var(--border)',
+                  cursor: 'pointer', fontSize: 'var(--text-sm)', fontWeight: 600,
+                  background: venmoSender === value ? 'rgba(16,185,129,.15)' : 'var(--surface)',
+                  color: venmoSender === value ? 'var(--accent)' : 'var(--muted)',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+            {venmoSender === 'partner' && (
               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 600 }}>
                 → settles up
               </span>
